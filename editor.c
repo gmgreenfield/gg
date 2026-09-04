@@ -54,13 +54,12 @@ int main(void) {
     
     if(bytes_read == -1) {
         perror("read()");
+        return 1;
     } else if (bytes_read == 0) {
         printf("\nend of input\n");
     } else {
         printf("\n%d\n", user);
     }
-        
-    printf("\n%d\n", user);
     
     return 0;
 }
