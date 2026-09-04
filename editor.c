@@ -12,10 +12,7 @@ void restore_original(void) {
 }
 
 int main(void) {
-    printf("here be dragons\n");
-    
     if(!tcgetattr(STDIN_FILENO, &original)) {
-        printf("success!\n");
         if(atexit(restore_original) != 0) {
             fprintf(stderr, "failed to register terminal restoration\n");
             return 1;
@@ -25,23 +22,11 @@ int main(void) {
         return 1;
     }
 
-    if (original.c_lflag & ECHO) {
-        printf("echo is enabled\n");
-    } else {
-        printf("echo is disabled\n");
-    }
-
     struct termios raw = original;
     raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
     raw.c_iflag &= ~(IXON | ICRNL | BRKINT | INPCK | ISTRIP);
     raw.c_oflag &= ~OPOST;
     raw.c_cflag |= CS8;
-
-    if (raw.c_lflag & ECHO) {
-        printf("echo is enabled\n");
-    } else {
-        printf("echo is disabled\n");
-    }
 
     raw.c_cc[VMIN] = 0;
     raw.c_cc[VTIME] = 1;
