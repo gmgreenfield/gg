@@ -6,6 +6,16 @@
 
 struct termios original;
 
+void draw_rows(int rows) {
+    for (int i=0; i < rows; i++) {
+        if(i == rows-1) {
+            printf("~");
+        } else {
+            printf("~\r\n");
+        }
+    }
+}
+
 int get_window_size(int *rows, int *cols) {
     struct winsize dims;
 
@@ -66,8 +76,8 @@ int main(void) {
     }
 
     printf("\x1b[2J\x1b[H");
-    printf("press keys; q quits: ");
-    printf("\r\n%d, %d\r\n", rows, cols);
+    draw_rows(rows);
+    printf("\x1b[H");
     fflush(stdout);
     
     while(1) {
