@@ -35,6 +35,7 @@ int main(void) {
     raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
     raw.c_iflag &= ~(IXON | ICRNL);
     raw.c_oflag &= ~OPOST;
+    raw.c_cflag |= CS8;
 
     if (raw.c_lflag & ECHO) {
         printf("echo is enabled\n");
