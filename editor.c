@@ -17,9 +17,10 @@ void draw_rows(int rows) {
 }
 
 void refresh_screen(int rows) {
-    printf("\x1b[2J\x1b[H");
+    printf("\x1b[?25l\x1b[2J\x1b[H");
     draw_rows(rows);
     printf("\x1b[H");
+    printf("\x1b[?25h");
     fflush(stdout);
 }
 
@@ -36,6 +37,8 @@ int get_window_size(int *rows, int *cols) {
 }
 
 void restore_original(void) {
+    printf("\x1b[?25h");
+    fflush(stdout);
     if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &original) == -1) {
         perror("tcsetattr");
     }
