@@ -33,7 +33,7 @@ int main(void) {
 
     struct termios raw = original;
     raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
-    raw.c_iflag &= ~(IXON | ICRNL);
+    raw.c_iflag &= ~(IXON | ICRNL | BRKINT | INPCK | ISTRIP);
     raw.c_oflag &= ~OPOST;
     raw.c_cflag |= CS8;
 
