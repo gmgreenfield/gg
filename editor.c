@@ -47,18 +47,23 @@ int main(void) {
 
     unsigned char user;
     
-    printf("press one key: ");
+    printf("press keys; q quits: ");
     fflush(stdout);
     
-    ssize_t bytes_read = read(STDIN_FILENO, &user, 1);
-    
-    if(bytes_read == -1) {
-        perror("read()");
-        return 1;
-    } else if (bytes_read == 0) {
-        printf("\nend of input\n");
-    } else {
-        printf("\n%d\n", user);
+    while(1) {
+        ssize_t bytes_read = read(STDIN_FILENO, &user, 1);
+        if(bytes_read == -1) {
+            perror("read()");
+            return 1;
+        } else if (bytes_read == 0) {
+            break;
+        } else if (bytes_read == 1) {
+            if(user == 'q') {
+                break;
+            }
+            printf("\n%d\n", user);
+            continue;
+        }
     }
     
     return 0;
