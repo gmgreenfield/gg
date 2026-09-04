@@ -16,6 +16,13 @@ void draw_rows(int rows) {
     }
 }
 
+void refresh_screen(int rows) {
+    printf("\x1b[2J\x1b[H");
+    draw_rows(rows);
+    printf("\x1b[H");
+    fflush(stdout);
+}
+
 int get_window_size(int *rows, int *cols) {
     struct winsize dims;
 
@@ -74,13 +81,9 @@ int main(void) {
         perror("ioctl");
         return 1;
     }
-
-    printf("\x1b[2J\x1b[H");
-    draw_rows(rows);
-    printf("\x1b[H");
-    fflush(stdout);
     
     while(1) {
+        refresh_screen(rows);
         ssize_t bytes_read = read(STDIN_FILENO, &user, 1);
         if(bytes_read == -1) {
             perror("read");
@@ -91,7 +94,6 @@ int main(void) {
             if(user == 'q') {
                 break;
             }
-            printf("\r\n%d\r\n", user);
             continue;
         }
     }
