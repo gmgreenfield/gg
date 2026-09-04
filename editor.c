@@ -45,6 +45,7 @@ int main(void) {
     }
 
     unsigned char user;
+    printf("\x1b[2J\x1b[H");
     printf("press keys; q quits: ");
     fflush(stdout);
     
