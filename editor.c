@@ -16,10 +16,10 @@ void draw_rows(int rows) {
     }
 }
 
-void refresh_screen(int rows) {
+void refresh_screen(int rows, int x, int y) {
     printf("\x1b[?25l\x1b[2J\x1b[H");
     draw_rows(rows);
-    printf("\x1b[H");
+    printf("\x1b[%d;%dH", y+1, x+1);
     printf("\x1b[?25h");
     fflush(stdout);
 }
@@ -75,6 +75,7 @@ int enable_raw_mode(void) {
 int main(void) {
     unsigned char user;
     int rows, cols;
+    int cursor_x=0, cursor_y=0;
 
     if(enable_raw_mode() == -1) {
         return 1;
@@ -86,7 +87,7 @@ int main(void) {
     }
     
     while(1) {
-        refresh_screen(rows);
+        refresh_screen(rows, cursor_x, cursor_y);
         ssize_t bytes_read = read(STDIN_FILENO, &user, 1);
         if(bytes_read == -1) {
             perror("read");
