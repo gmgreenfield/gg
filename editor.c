@@ -63,7 +63,7 @@ int main(void) {
             if(user == 'q') {
                 break;
             }
-            printf("\n%d\n", user);
+            printf("\r\n%d\r\n", user);
             continue;
         }
     }
