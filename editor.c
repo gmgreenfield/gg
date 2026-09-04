@@ -7,7 +7,7 @@ struct termios original;
 
 void restore_original(void) {
     if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &original) == -1) {
-        perror("failed to restore terminal");
+        perror("tcsetattr");
     }
 }
 
@@ -21,7 +21,7 @@ int main(void) {
             return 1;
         }
     } else {
-        perror("tcgetattr error");
+        perror("tcgetattr");
         return 1;
     }
 
@@ -32,7 +32,7 @@ int main(void) {
     }
 
     struct termios raw = original;
-    raw.c_lflag &= ~(ECHO | ICANON);
+    raw.c_lflag &= ~(ECHO | ICANON | ISIG);
 
     if (raw.c_lflag & ECHO) {
         printf("echo is enabled\n");
@@ -41,7 +41,7 @@ int main(void) {
     }
 
     if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
-        perror("tcsetattr error");
+        perror("tcsetattr");
         return 1;
     }
 
@@ -53,7 +53,7 @@ int main(void) {
     while(1) {
         ssize_t bytes_read = read(STDIN_FILENO, &user, 1);
         if(bytes_read == -1) {
-            perror("read()");
+            perror("read");
             return 1;
         } else if (bytes_read == 0) {
             break;
