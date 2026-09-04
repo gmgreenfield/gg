@@ -72,10 +72,26 @@ int enable_raw_mode(void) {
     return 0;
 }
 
+int read_key(void) {
+    unsigned char key;
+
+    while (1) {
+        ssize_t bytes_read = read(STDIN_FILENO, &key, 1);
+        if(bytes_read == -1) {
+            perror("read");
+            return -1;
+        } else if (bytes_read == 0) {
+            continue;
+        } else if (bytes_read == 1) {
+            return key;
+        }
+    }
+}
+
 int main(void) {
-    unsigned char user;
     int rows, cols;
     int cursor_x=0, cursor_y=0;
+    int key;
 
     if(enable_raw_mode() == -1) {
         return 1;
@@ -88,17 +104,13 @@ int main(void) {
     
     while(1) {
         refresh_screen(rows, cursor_x, cursor_y);
-        ssize_t bytes_read = read(STDIN_FILENO, &user, 1);
-        if(bytes_read == -1) {
-            perror("read");
+        key = read_key();
+
+        if(key == -1) {
             return 1;
-        } else if (bytes_read == 0) {
-            continue;
-        } else if (bytes_read == 1) {
-            if(user == 'q') {
-                break;
-            }
-            continue;
+        }
+        if(key == 'q') {
+            break;
         }
     }
     
