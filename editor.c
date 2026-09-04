@@ -11,15 +11,15 @@ void restore_original(void) {
     }
 }
 
-int main(void) {
+int enable_raw_mode(void) {
     if(!tcgetattr(STDIN_FILENO, &original)) {
         if(atexit(restore_original) != 0) {
             fprintf(stderr, "failed to register terminal restoration\n");
-            return 1;
+            return -1;
         }
     } else {
         perror("tcgetattr");
-        return 1;
+        return -1;
     }
 
     struct termios raw = original;
@@ -33,11 +33,18 @@ int main(void) {
 
     if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
         perror("tcsetattr");
+        return -1;
+    }
+
+    return 0;
+}
+
+int main(void) {
+    if(enable_raw_mode() == -1) {
         return 1;
     }
 
     unsigned char user;
-    
     printf("press keys; q quits: ");
     fflush(stdout);
     
