@@ -6,6 +6,18 @@
 
 struct termios original;
 
+int get_window_size(int *rows, int *cols) {
+    struct winsize dims;
+
+    if(ioctl(STDOUT_FILENO, TIOCGWINSZ, &dims) == -1) {
+        return -1;
+    }
+
+    *rows = dims.ws_row;
+    *cols = dims.ws_col;
+    return 0;
+}
+
 void restore_original(void) {
     if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &original) == -1) {
         perror("tcsetattr");
@@ -41,22 +53,21 @@ int enable_raw_mode(void) {
 }
 
 int main(void) {
+    unsigned char user;
+    int rows, cols;
+
     if(enable_raw_mode() == -1) {
         return 1;
     }
 
-    unsigned char user;
-    struct winsize dims;
-
-    if(ioctl(STDOUT_FILENO, TIOCGWINSZ, &dims) == -1) {
+    if(get_window_size(&rows, &cols) == -1) {
         perror("ioctl");
         return 1;
     }
 
     printf("\x1b[2J\x1b[H");
     printf("press keys; q quits: ");
-    printf("\r\n%u, %u\r\n", (unsigned int)dims.ws_row,
-        (unsigned int)dims.ws_col);
+    printf("\r\n%d, %d\r\n", rows, cols);
     fflush(stdout);
     
     while(1) {
