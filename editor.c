@@ -33,6 +33,7 @@ int main(void) {
 
     struct termios raw = original;
     raw.c_lflag &= ~(ECHO | ICANON | ISIG);
+    raw.c_iflag &= ~IXON;
 
     if (raw.c_lflag & ECHO) {
         printf("echo is enabled\n");
