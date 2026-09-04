@@ -43,6 +43,9 @@ int main(void) {
         printf("echo is disabled\n");
     }
 
+    raw.c_cc[VMIN] = 0;
+    raw.c_cc[VTIME] = 1;
+
     if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
         perror("tcsetattr");
         return 1;
@@ -59,7 +62,7 @@ int main(void) {
             perror("read");
             return 1;
         } else if (bytes_read == 0) {
-            break;
+            continue;
         } else if (bytes_read == 1) {
             if(user == 'q') {
                 break;
