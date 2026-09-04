@@ -2,6 +2,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <sys/ioctl.h>
 
 struct termios original;
 
@@ -45,8 +46,17 @@ int main(void) {
     }
 
     unsigned char user;
+    struct winsize dims;
+
+    if(ioctl(STDOUT_FILENO, TIOCGWINSZ, &dims) == -1) {
+        perror("ioctl");
+        return 1;
+    }
+
     printf("\x1b[2J\x1b[H");
     printf("press keys; q quits: ");
+    printf("\r\n%u, %u\r\n", (unsigned int)dims.ws_row,
+        (unsigned int)dims.ws_col);
     fflush(stdout);
     
     while(1) {
