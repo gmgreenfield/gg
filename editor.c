@@ -13,6 +13,13 @@ enum editor_key {
     ARROW_DOWN
 };
 
+typedef struct {
+    int cursor_x;
+    int cursor_y;
+    int screen_rows;
+    int screen_cols;
+} editor_positions;
+
 void draw_rows(int rows) {
     for (int i=0; i < rows; i++) {
         if(i == rows-1) {
@@ -131,21 +138,20 @@ int read_key(void) {
 }
 
 int main(void) {
-    int rows, cols;
-    int cursor_x=0, cursor_y=0;
+    editor_positions p = {0};
     int key;
 
     if(enable_raw_mode() == -1) {
         return 1;
     }
 
-    if(get_window_size(&rows, &cols) == -1) {
+    if(get_window_size(&p.screen_rows, &p.screen_cols) == -1) {
         perror("ioctl");
         return 1;
     }
 
     while(1) {
-        refresh_screen(rows, cursor_x, cursor_y);
+        refresh_screen(p.screen_rows, p.cursor_x, p.cursor_y);
         key = read_key();
 
         if(key == -1) 
@@ -156,20 +162,20 @@ int main(void) {
 
         switch(key) {
             case ARROW_LEFT:
-                if(cursor_x > 0)
-                    cursor_x--;
+                if(p.cursor_x > 0)
+                    p.cursor_x--;
                 break;
             case ARROW_RIGHT:
-                if(cursor_x < cols-1)
-                    cursor_x++;
+                if(p.cursor_x < p.screen_cols-1)
+                    p.cursor_x++;
                 break;
             case ARROW_UP:
-                if(cursor_y > 0)
-                    cursor_y--;
+                if(p.cursor_y > 0)
+                    p.cursor_y--;
                 break;
             case ARROW_DOWN:
-                if(cursor_y < rows-1)
-                    cursor_y++;
+                if(p.cursor_y < p.screen_rows-1)
+                    p.cursor_y++;
                 break;
             default:
                 break;
