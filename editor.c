@@ -186,6 +186,18 @@ int main(void) {
                 break;
             case ARROW_DOWN:
                 break;
+            case 127:
+            case CTRL_KEY('h'):
+                if(p.cursor_x > 0) { 
+                    memmove(
+                        &p.line[p.cursor_x - 1],
+                        &p.line[p.cursor_x],
+                        (size_t)(p.line_length - p.cursor_x)
+                    );
+                    p.cursor_x--;
+                    p.line_length--;
+                }
+                break;
             default:
             if (key >=32 && key <= 126) {
                 if(p.line_length < LINE_CAPACITY &&
@@ -194,7 +206,7 @@ int main(void) {
                         // The source and destination ranges
                         // overlap while shifting characters
                         // within the same array
-                        // memove() support overlap
+                        // memove() supports overlap
                         // memcpy() doesn't support it
                         memmove(
                             &p.line[p.cursor_x + 1],
