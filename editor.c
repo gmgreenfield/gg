@@ -151,6 +151,39 @@ int read_key(void) {
     }
 }
 
+int load_file(editor_state *s) {
+    if(s->filename == NULL) {
+        return 0;
+    }
+    FILE *fd;
+
+    fd = fopen(s->filename, "r");
+    if(fd == NULL) {
+        perror(s->filename);
+        return -1;
+    }
+
+    char *result = fgets(s->line, LINE_CAPACITY, fd);
+    if(result == NULL) {
+        if (ferror(fd)) {
+            perror("fgets");
+            fclose(fd);
+            return -1;
+        }
+        s->line_length = 0;
+    } else {
+        s->line_length = strcspn(s->line, "\r\n");
+        s->line[s->line_length] = '\0';
+    }
+
+    if(fclose(fd) == EOF) {
+        perror("fclose");
+        return -1;
+    }
+    
+    return 0;
+}
+
 int main(int argc, char **argv) {
     editor_state p = {0};
     int key;
@@ -160,13 +193,14 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if(argc == 2) {
+    if(argc == 2)
         p.filename = argv[1];
-    }
 
-    if(enable_raw_mode() == -1) {
+    if(load_file(&p) == -1)
         return 1;
-    }
+
+    if(enable_raw_mode() == -1)
+        return 1;
 
     if(get_window_size(&p.screen_rows, &p.screen_cols) == -1) {
         perror("ioctl");
