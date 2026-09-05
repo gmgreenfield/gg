@@ -177,16 +177,12 @@ int main(void) {
                     p.cursor_x--;
                 break;
             case ARROW_RIGHT:
-                if(p.cursor_x < p.screen_cols-1)
+                if(p.cursor_x < p.line_length)
                     p.cursor_x++;
                 break;
             case ARROW_UP:
-                if(p.cursor_y > 0)
-                    p.cursor_y--;
                 break;
             case ARROW_DOWN:
-                if(p.cursor_y < p.screen_rows-1)
-                    p.cursor_y++;
                 break;
             default:
             if (key >=32 && key <= 126) {
