@@ -25,6 +25,7 @@ typedef struct {
     int screen_cols;
     int line_length;
     char line[LINE_CAPACITY];
+    const char *filename;
 } editor_state;
 
 void draw_rows(const editor_state *s) {
@@ -150,9 +151,18 @@ int read_key(void) {
     }
 }
 
-int main(void) {
+int main(int argc, char **argv) {
     editor_state p = {0};
     int key;
+
+    if (argc > 2) {
+        fprintf(stderr, "usage: %s [filename]\n", argv[0]);
+        return 1;
+    }
+
+    if(argc == 2) {
+        p.filename = argv[1];
+    }
 
     if(enable_raw_mode() == -1) {
         return 1;
