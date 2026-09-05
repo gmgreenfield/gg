@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
+#include <errno.h>
 
 
 #define LINE_CAPACITY   256
@@ -159,8 +160,12 @@ int load_file(editor_state *s) {
 
     fd = fopen(s->filename, "r");
     if(fd == NULL) {
-        perror(s->filename);
-        return -1;
+        if(errno == ENOENT) {
+            return 0;
+        } else {
+            perror(s->filename);
+            return -1;
+        }
     }
 
     char *result = fgets(s->line, LINE_CAPACITY, fd);
