@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <string.h>
 #include <termios.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
+
 
 #define LINE_CAPACITY   256
 #define CTRL_KEY(k)     ((k) & 0x1f)
@@ -188,10 +190,20 @@ int main(void) {
             if (key >=32 && key <= 126) {
                 if(p.line_length < LINE_CAPACITY &&
                     p.line_length < (p.screen_cols-1)) {
-                        p.line[p.line_length] = (char)key;
+                        int tail_len = p.line_length - p.cursor_x;
+                        // The source and destination ranges
+                        // overlap while shifting characters
+                        // within the same array
+                        // memove() support overlap
+                        // memcpy() doesn't support it
+                        memmove(
+                            &p.line[p.cursor_x + 1],
+                            &p.line[p.cursor_x],
+                            (size_t)tail_len
+                        );
+                        p.line[p.cursor_x] = (char)key;
                         p.line_length++;
-                        p.cursor_x = p.line_length;
-                        p.cursor_y = 0;
+                        p.cursor_x++;
                 } //if
             } //if
         } //switch
