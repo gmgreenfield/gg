@@ -44,7 +44,7 @@ int get_window_size(int *rows, int *cols) {
 }
 
 void restore_original(void) {
-    printf("\x1b[?25h");
+    printf("\x1b[2J\x1b[H\x1b[?25h");
     fflush(stdout);
     if(tcsetattr(STDIN_FILENO, TCSAFLUSH, &original) == -1) {
         perror("tcsetattr");
