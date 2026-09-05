@@ -4,9 +4,10 @@
 #include <stdlib.h>
 #include <sys/ioctl.h>
 
-struct termios original;
+#define LINE_CAPACITY   256
+#define CTRL_KEY(k)     ((k) & 0x1f)
 
-#define CTRL_KEY(k) ((k) & 0x1f)
+struct termios original;
 
 enum editor_key {
     ARROW_LEFT = 1000,
@@ -21,7 +22,7 @@ typedef struct {
     int screen_rows;
     int screen_cols;
     int line_length;
-    char line[256];
+    char line[LINE_CAPACITY];
 } editor_state;
 
 void draw_rows(const editor_state *s) {
@@ -188,9 +189,17 @@ int main(void) {
                     p.cursor_y++;
                 break;
             default:
-                break;
-        }
-    }
-
+            if (key >=32 && key <= 126) {
+                if(p.line_length < LINE_CAPACITY &&
+                    p.line_length < (p.screen_cols-1)) {
+                        p.line[p.line_length] = (char)key;
+                        p.line_length++;
+                        p.cursor_x = p.line_length;
+                        p.cursor_y = 0;
+                } //if
+            } //if
+        } //switch
+    } //while
+    
     return 0;
 }
