@@ -6,6 +6,8 @@
 
 struct termios original;
 
+#define CTRL_KEY(k) ((k) & 0x1f)
+
 enum editor_key {
     ARROW_LEFT = 1000,
     ARROW_RIGHT,
@@ -165,7 +167,7 @@ int main(void) {
         if(key == -1) 
             return 1;
 
-        if(key == 'q')
+        if(key == CTRL_KEY('q'))
             break;
 
         switch(key) {
