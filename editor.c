@@ -18,22 +18,30 @@ typedef struct {
     int cursor_y;
     int screen_rows;
     int screen_cols;
-} editor_positions;
+    int line_length;
+    char line[256];
+} editor_state;
 
-void draw_rows(int rows) {
-    for (int i=0; i < rows; i++) {
-        if(i == rows-1) {
-            printf("~");
+void draw_rows(const editor_state *s) {
+    for (int i=0; i < s->screen_rows; i++) {
+        if(i == 0) {
+            for (int j=0; j < s->line_length; j++) {
+                putchar(s->line[j]);
+            }
         } else {
-            printf("~\r\n");
+            putchar('~');
+        }
+
+        if(i < s->screen_rows - 1) {
+            printf("\r\n");
         }
     }
 }
 
-void refresh_screen(int rows, int x, int y) {
+void refresh_screen(const editor_state *s) {
     printf("\x1b[?25l\x1b[2J\x1b[H");
-    draw_rows(rows);
-    printf("\x1b[%d;%dH", y+1, x+1);
+    draw_rows(s);
+    printf("\x1b[%d;%dH", s->cursor_y+1, s->cursor_x+1);
     printf("\x1b[?25h");
     fflush(stdout);
 }
@@ -138,7 +146,7 @@ int read_key(void) {
 }
 
 int main(void) {
-    editor_positions p = {0};
+    editor_state p = {0};
     int key;
 
     if(enable_raw_mode() == -1) {
@@ -151,7 +159,7 @@ int main(void) {
     }
 
     while(1) {
-        refresh_screen(p.screen_rows, p.cursor_x, p.cursor_y);
+        refresh_screen(&p);
         key = read_key();
 
         if(key == -1) 
