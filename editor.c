@@ -6,6 +6,13 @@
 
 struct termios original;
 
+enum editor_key {
+    ARROW_LEFT = 1000,
+    ARROW_RIGHT,
+    ARROW_UP,
+    ARROW_DOWN
+};
+
 void draw_rows(int rows) {
     for (int i=0; i < rows; i++) {
         if(i == rows-1) {
@@ -83,6 +90,41 @@ int read_key(void) {
         } else if (bytes_read == 0) {
             continue;
         } else if (bytes_read == 1) {
+            if(key == '\x1b') {
+                unsigned char seq[2];
+
+                ssize_t s0 = read(STDIN_FILENO, &seq[0], 1);
+                if(s0 == -1) {
+                    perror("read");
+                    return -1;
+                }
+                if(s0 == 0) {
+                    return '\x1b';
+                }
+                ssize_t s1 = read(STDIN_FILENO, &seq[1], 1);
+                if(s1 == -1) {
+                    perror("read");
+                    return -1;
+                }
+                if(s1 == 0) {
+                    return '\x1b';
+                }
+
+                if(seq[0] == '[') {
+                    switch (seq[1]) {
+                        case 'A':
+                            return ARROW_UP;
+                        case 'B':
+                            return ARROW_DOWN;
+                        case 'C':
+                            return ARROW_RIGHT;
+                        case 'D':
+                            return ARROW_LEFT;
+                        default:
+                            return '\x1b';
+                    }
+                }
+            }
             return key;
         }
     }
@@ -101,18 +143,38 @@ int main(void) {
         perror("ioctl");
         return 1;
     }
-    
+
     while(1) {
         refresh_screen(rows, cursor_x, cursor_y);
         key = read_key();
 
-        if(key == -1) {
+        if(key == -1) 
             return 1;
-        }
-        if(key == 'q') {
+
+        if(key == 'q')
             break;
+
+        switch(key) {
+            case ARROW_LEFT:
+                if(cursor_x > 0)
+                    cursor_x--;
+                break;
+            case ARROW_RIGHT:
+                if(cursor_x < cols-1)
+                    cursor_x++;
+                break;
+            case ARROW_UP:
+                if(cursor_y > 0)
+                    cursor_y--;
+                break;
+            case ARROW_DOWN:
+                if(cursor_y < rows-1)
+                    cursor_y++;
+                break;
+            default:
+                break;
         }
     }
-    
+
     return 0;
 }
