@@ -189,6 +189,38 @@ int load_file(editor_state *s) {
     return 0;
 }
 
+int save_file(const editor_state *s) {
+    if(s->filename == NULL)
+        return 0;
+
+    FILE *fd;
+    fd = fopen(s->filename, "w");
+    if(fd == NULL) {
+        perror(s->filename);
+        return -1;
+    }
+
+    size_t written = fwrite(s->line, 1, (size_t)s->line_length, fd);
+    if(written != (size_t)s->line_length) {
+        if(ferror(fd)) {
+            perror("fwrite");
+        } else {
+            fprintf(stderr, "fwrite: short write\n");
+        }
+
+        fclose(fd);
+        return -1;
+    }
+    
+
+    if(fclose(fd) == EOF) {
+        perror("fclose");
+        return -1;
+    }
+    
+    return 0;
+}
+
 int main(int argc, char **argv) {
     editor_state p = {0};
     int key;
@@ -234,6 +266,11 @@ int main(int argc, char **argv) {
             case ARROW_UP:
                 break;
             case ARROW_DOWN:
+                break;
+            case CTRL_KEY('s'):
+                if(save_file(&p) == -1) {
+                    return 1;
+                }
                 break;
             case 127:
             case CTRL_KEY('h'):
