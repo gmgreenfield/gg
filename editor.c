@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
 #include <string.h>
 #include <termios.h>
@@ -5,7 +7,6 @@
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include <errno.h>
-
 
 #define LINE_CAPACITY   256
 #define CTRL_KEY(k)     ((k) & 0x1f)
@@ -160,75 +161,6 @@ int read_key(void) {
     }
 }
 
-int load_file(editor_state *s) {
-    if(s->filename == NULL) {
-        return 0;
-    }
-    FILE *fd;
-
-    fd = fopen(s->filename, "r");
-    if(fd == NULL) {
-        if(errno == ENOENT) {
-            return 0;
-        } else {
-            perror(s->filename);
-            return -1;
-        }
-    }
-
-    char *result = fgets(s->line, LINE_CAPACITY, fd);
-    if(result == NULL) {
-        if (ferror(fd)) {
-            perror("fgets");
-            fclose(fd);
-            return -1;
-        }
-        s->line_length = 0;
-    } else {
-        s->line_length = strcspn(s->line, "\r\n");
-        s->line[s->line_length] = '\0';
-    }
-
-    if(fclose(fd) == EOF) {
-        perror("fclose");
-        return -1;
-    }
-    
-    return 0;
-}
-
-int save_file(const editor_state *s) {
-    if(s->filename == NULL)
-        return 0;
-
-    FILE *fd;
-    fd = fopen(s->filename, "w");
-    if(fd == NULL) {
-        perror(s->filename);
-        return -1;
-    }
-
-    size_t written = fwrite(s->line, 1, (size_t)s->line_length, fd);
-    if(written != (size_t)s->line_length) {
-        if(ferror(fd)) {
-            perror("fwrite");
-        } else {
-            fprintf(stderr, "fwrite: short write\n");
-        }
-
-        fclose(fd);
-        return -1;
-    }
-    
-
-    if(fclose(fd) == EOF) {
-        perror("fclose");
-        return -1;
-    }
-    
-    return 0;
-}
-
 int append_row(editor_state *state, const char *chars, size_t length) {
     char *copy = malloc(length + 1);
     if(copy == NULL) {
@@ -265,6 +197,90 @@ int append_row(editor_state *state, const char *chars, size_t length) {
     
     state->file_row_count++;
 
+    return 0;
+}
+
+int load_file(editor_state *s) {
+    if(s->filename == NULL) {
+        return 0;
+    }
+    
+    FILE *stream;
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t nread;
+
+    stream = fopen(s->filename, "r");
+    if(stream == NULL) {
+        if(errno == ENOENT) {
+            return 0;
+        } else {
+            perror(s->filename);
+            return -1;
+        }
+    }
+
+    while ((nread = getline(&line, &len, stream)) != -1) {
+        while(nread > 0 &&
+            (line[nread-1] == '\n' || line[nread-1] == '\r')) {
+            nread--;
+        }
+        
+        if(append_row(s, line, (size_t)nread) == -1) {
+            fprintf(stderr, "failed to append row\n");
+            free(line);
+            if(fclose(stream) == EOF) {
+                perror("fclose");
+            }
+            return -1;
+        }
+    }
+
+    if(ferror(stream)) {
+        perror("getline");
+        free(line);
+        fclose(stream);
+        return -1;
+    }
+
+    free(line);
+    if(fclose(stream) == EOF) {
+        perror("fclose");
+        return -1;
+    }
+    
+    return 0;
+}
+
+int save_file(const editor_state *s) {
+    if(s->filename == NULL)
+        return 0;
+
+    FILE *fd;
+    fd = fopen(s->filename, "w");
+    if(fd == NULL) {
+        perror(s->filename);
+        return -1;
+    }
+
+    size_t written = fwrite(s->line, 1, (size_t)s->line_length, fd);
+    if(written != (size_t)s->line_length) {
+        if(ferror(fd)) {
+            perror("fwrite");
+        } else {
+            fprintf(stderr, "fwrite: short write\n");
+        }
+
+        fclose(fd);
+        return -1;
+    }
+    
+
+    if(fclose(fd) == EOF) {
+        perror("fclose");
+        return -1;
+    }
+    
     return 0;
 }
 
@@ -332,27 +348,24 @@ int main(int argc, char **argv) {
                 }
                 break;
             default:
-            if (key >=32 && key <= 126) {
-                if(p.line_length < LINE_CAPACITY &&
-                    p.line_length < (p.screen_cols-1)) {
-                        int tail_len = p.line_length - p.cursor_x;
-                        // The source and destination ranges
-                        // overlap while shifting characters
-                        // within the same array
-                        // memove() supports overlap
-                        // memcpy() doesn't support it
-                        memmove(
-                            &p.line[p.cursor_x + 1],
-                            &p.line[p.cursor_x],
-                            (size_t)tail_len
-                        );
-                        p.line[p.cursor_x] = (char)key;
-                        p.line_length++;
-                        p.cursor_x++;
-                } //if
-            } //if
-        } //switch
-    } //while
+                if (key >=32 && key <= 126) {
+                    if(p.line_length < LINE_CAPACITY &&
+                        p.line_length < (p.screen_cols-1)) {
+                            int tail_len = p.line_length - p.cursor_x;
+    
+                            memmove(
+                                &p.line[p.cursor_x + 1],
+                                &p.line[p.cursor_x],
+                                (size_t)tail_len
+                            );
+    
+                            p.line[p.cursor_x] = (char)key;
+                            p.line_length++;
+                            p.cursor_x++;
+                    }
+                }
+            }
+    }
     
     return 0;
 }
