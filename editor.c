@@ -327,7 +327,9 @@ int main(int argc, char **argv) {
                     p.cursor_x--;
                 break;
             case ARROW_RIGHT:
-                if(p.cursor_x < p.line_length)
+                if((size_t)p.cursor_y < p.file_row_count &&
+                    (size_t)p.cursor_x < p.file_rows[p.cursor_y].length &&
+                    p.cursor_x < p.screen_cols-1)
                     p.cursor_x++;
                 break;
             case ARROW_UP:
