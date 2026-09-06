@@ -20,6 +20,11 @@ enum editor_key {
 };
 
 typedef struct {
+    char *chars;
+    size_t length;
+} editor_row;
+
+typedef struct {
     int cursor_x;
     int cursor_y;
     int screen_rows;
@@ -27,6 +32,9 @@ typedef struct {
     int line_length;
     char line[LINE_CAPACITY];
     const char *filename;
+    editor_row *file_rows;
+    size_t file_row_count;
+    size_t file_row_capacity;
 } editor_state;
 
 void draw_rows(const editor_state *s) {
