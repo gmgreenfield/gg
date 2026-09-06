@@ -229,6 +229,45 @@ int save_file(const editor_state *s) {
     return 0;
 }
 
+int append_row(editor_state *state, const char *chars, size_t length) {
+    char *copy = malloc(length + 1);
+    if(copy == NULL) {
+        return -1;
+    }
+
+    memcpy(copy, chars, length);
+    copy[length] = '\0';
+
+    if (state->file_row_count == state->file_row_capacity) {
+        size_t new_capacity;
+        if (state->file_row_capacity == 0) {
+            new_capacity = 8;   
+        } else {
+            new_capacity = state->file_row_capacity * 2;
+        }
+
+        editor_row *new_rows = realloc(
+            state->file_rows, new_capacity * sizeof(*new_rows));
+
+        if(new_rows == NULL) {
+            free(copy);
+            return -1;
+        }
+
+        state->file_row_capacity = new_capacity;
+        state->file_rows = new_rows;
+    }
+
+    editor_row *row = &state->file_rows[state->file_row_count];
+
+    row->chars = copy;
+    row->length = length;
+    
+    state->file_row_count++;
+
+    return 0;
+}
+
 int main(int argc, char **argv) {
     editor_state p = {0};
     int key;
