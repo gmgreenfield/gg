@@ -331,8 +331,13 @@ int main(int argc, char **argv) {
                     p.cursor_x++;
                 break;
             case ARROW_UP:
+                if(p.cursor_y > 0)
+                    p.cursor_y--;
                 break;
             case ARROW_DOWN:
+                if((size_t)(p.cursor_y + 1) < p.file_row_count &&
+                    p.cursor_y + 1 < p.screen_rows)
+                    p.cursor_y++;
                 break;
             case CTRL_KEY('s'):
                 if(save_file(&p) == -1) {
