@@ -40,15 +40,19 @@ typedef struct {
 
 void draw_rows(const editor_state *s) {
     for (int i=0; i < s->screen_rows; i++) {
-        if(i == 0) {
-            for (int j=0; j < s->line_length; j++) {
-                putchar(s->line[j]);
+        if((size_t)i < s->file_row_count) {
+            size_t row_length = s->file_rows[i].length;
+            if(s->file_rows[i].length > (size_t)s->screen_cols) {
+                row_length = (size_t)s->screen_cols;
+            }
+            for (size_t j=0; j < row_length; j++) {
+                putchar(s->file_rows[i].chars[j]);
             }
         } else {
             putchar('~');
         }
 
-        if(i < s->screen_rows - 1) {
+        if((int)i < s->screen_rows - 1) {
             printf("\r\n");
         }
     }
