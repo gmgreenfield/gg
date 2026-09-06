@@ -329,17 +329,27 @@ int main(int argc, char **argv) {
             case ARROW_RIGHT:
                 if((size_t)p.cursor_y < p.file_row_count &&
                     (size_t)p.cursor_x < p.file_rows[p.cursor_y].length &&
-                    p.cursor_x < p.screen_cols-1)
+                    p.cursor_x < p.screen_cols-1) {
                     p.cursor_x++;
+                }
                 break;
             case ARROW_UP:
-                if(p.cursor_y > 0)
+                if (p.cursor_y > 0) {
                     p.cursor_y--;
+                    if((size_t)p.cursor_x >
+                        p.file_rows[p.cursor_y].length) {
+                        p.cursor_x = (int)p.file_rows[p.cursor_y].length;
+                    }
+                }
                 break;
             case ARROW_DOWN:
                 if((size_t)(p.cursor_y + 1) < p.file_row_count &&
-                    p.cursor_y + 1 < p.screen_rows)
+                    p.cursor_y + 1 < p.screen_rows) {
                     p.cursor_y++;
+                    if(p.cursor_x > (int)p.file_rows[p.cursor_y].length) {
+                        p.cursor_x = (int)p.file_rows[p.cursor_y].length;
+                    }
+                }
                 break;
             case CTRL_KEY('s'):
                 if(save_file(&p) == -1) {
