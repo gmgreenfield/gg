@@ -346,7 +346,7 @@ int main(int argc, char **argv) {
                 if((size_t)(p.cursor_y + 1) < p.file_row_count &&
                     p.cursor_y + 1 < p.screen_rows) {
                     p.cursor_y++;
-                    if(p.cursor_x > (int)p.file_rows[p.cursor_y].length) {
+                    if((size_t)p.cursor_x > p.file_rows[p.cursor_y].length) {
                         p.cursor_x = (int)p.file_rows[p.cursor_y].length;
                     }
                 }
