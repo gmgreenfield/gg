@@ -471,6 +471,8 @@ int main(int argc, char **argv) {
                 break;
             }
     }
+
+    free_rows(&p);
     
     return 0;
 }
