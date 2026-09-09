@@ -112,6 +112,21 @@ int enable_raw_mode(void) {
     return 0;
 }
 
+ssize_t read_byte(unsigned char *byte) {
+    while (1) {
+        ssize_t bytes_read = read(STDIN_FILENO, byte, 1);
+	if(bytes_read == -1 && errno == EINTR) {
+	    continue;
+	} else if (bytes_read == -1) {
+	    return -1;
+	} else if (bytes_read == 0) {
+	    return 0;
+	} else if (bytes_read == 1) {
+	    return 1;
+	}
+    }
+}
+
 int read_key(void) {
     unsigned char key;
 
