@@ -380,6 +380,7 @@ void free_rows(editor_state *s) {
 int main(int argc, char **argv) {
     editor_state p = {0};
     int key;
+    int exit_status = 0;
 
     if (argc > 2) {
         fprintf(stderr, "usage: %s [filename]\n", argv[0]);
@@ -411,8 +412,10 @@ int main(int argc, char **argv) {
         refresh_screen(&p);
         key = read_key();
 
-        if(key == -1) 
-            return 1;
+        if(key == -1) {
+            exit_status = 1;
+            goto cleanup;
+        }
 
         if(key == CTRL_KEY('q'))
             break;
@@ -472,7 +475,7 @@ int main(int argc, char **argv) {
             }
     }
 
+cleanup:
     free_rows(&p);
-    
-    return 0;
+    return exit_status;
 }
