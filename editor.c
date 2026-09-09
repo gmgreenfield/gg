@@ -29,6 +29,7 @@ typedef struct {
     int cursor_y;
     int screen_rows;
     int screen_cols;
+    int file_ends_with_newline;
     const char *filename;
     editor_row *file_rows;
     size_t file_row_count;
