@@ -29,7 +29,7 @@ typedef struct {
     int cursor_y;
     int screen_rows;
     int screen_cols;
-    int file_ends_with_newline;
+    int final_newline;
     const char *filename;
     editor_row *file_rows;
     size_t file_row_count;
@@ -223,7 +223,7 @@ int load_file(editor_state *s) {
     }
 
     while ((nread = getline(&line, &len, stream)) != -1) {
-	s->file_ends_with_newline = 
+	s->final_newline = 
 		nread > 0 && line[nread - 1] == '\n';
 
         while(nread > 0 &&
@@ -296,6 +296,14 @@ int save_file(const editor_state *s) {
               return -1;
             }
         }
+    }
+
+    if(s->final_newline) {
+	if(fputc('\n', fd) == EOF) {
+	    perror("fputc");
+	    fclose(fd);
+	    return -1;
+	}
     }
 
     if(fclose(fd) == EOF) {
