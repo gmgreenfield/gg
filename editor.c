@@ -384,28 +384,35 @@ int main(int argc, char **argv) {
 
     if (argc > 2) {
         fprintf(stderr, "usage: %s [filename]\n", argv[0]);
-        return 1;
+        exit_status = 1;
+        goto cleanup;
     }
 
     if(argc == 2)
         p.filename = argv[1];
 
-    if(load_file(&p) == -1)
-        return 1;
+    if(load_file(&p) == -1) {
+        exit_status = 1;
+        goto cleanup;
+    }
 
     if (p.file_row_count == 0) {
         if (append_row(&p, "", 0) == -1) {
             fprintf(stderr, "failed to create initial row\n");
-            return 1;
+            exit_status = 1;
+            goto cleanup;
         }
     }
 
-    if(enable_raw_mode() == -1)
-        return 1;
+    if(enable_raw_mode() == -1) {
+        exit_status = 1;
+        goto cleanup;
+    }
 
     if(get_window_size(&p.screen_rows, &p.screen_cols) == -1) {
         perror("ioctl");
-        return 1;
+        exit_status = 1;
+        goto cleanup;
     }
 
     while(1) {
@@ -452,7 +459,8 @@ int main(int argc, char **argv) {
                 break;
             case CTRL_KEY('s'):
                 if(save_file(&p) == -1) {
-                    return 1;
+                    exit_status = 1;
+                    goto cleanup;
                 }
                 break;
             case 127:
@@ -460,7 +468,8 @@ int main(int argc, char **argv) {
                 if(p.cursor_x > 0) {
                     if(delete_char(&p) == -1) {
                         fprintf(stderr, "failed to delete character.\n");
-                        return 1;
+                        exit_status = 1;
+                        goto cleanup;
                     };
                 }
                 break;
@@ -468,7 +477,8 @@ int main(int argc, char **argv) {
                 if (key >=32 && key <= 126) {
                     if (insert_char(&p, key) == -1) {
                         fprintf(stderr, "failed to insert character.\n");
-                        return 1;
+                        exit_status = 1;
+                        goto cleanup;
                     }
                 }
                 break;
