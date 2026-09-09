@@ -365,6 +365,18 @@ int delete_char(editor_state *s) {
    return 0;
 }
 
+void free_rows(editor_state *s) {
+    for (size_t i = 0; i < s->file_row_count; i++) {
+       free(s->file_rows[i].chars);
+    }
+
+    free(s->file_rows);
+
+    s->file_rows = NULL;
+    s->file_row_count = 0;
+    s->file_row_capacity = 0;
+}
+
 int main(int argc, char **argv) {
     editor_state p = {0};
     int key;
