@@ -117,10 +117,12 @@ int read_key(void) {
 
     while (1) {
         ssize_t bytes_read = read(STDIN_FILENO, &key, 1);
-        if(bytes_read == -1) {
-            perror("read");
-            return -1;
-        } else if (bytes_read == 0) {
+        if(bytes_read == -1 && errno == EINTR) {
+	    continue;
+        } else if (bytes_read == -1) {
+	    perror("read");
+	    return -1;
+       	} else if (bytes_read == 0) {
             continue;
         } else if (bytes_read == 1) {
             if(key == '\x1b') {
