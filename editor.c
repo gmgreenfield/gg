@@ -337,6 +337,13 @@ int main(int argc, char **argv) {
     if(load_file(&p) == -1)
         return 1;
 
+    if (p.file_row_count == 0) {
+        if (append_row(&p, "", 0) == -1) {
+            fprintf(stderr, "failed to create initial row\n");
+            return 1;
+        }
+    }
+
     if(enable_raw_mode() == -1)
         return 1;
 
