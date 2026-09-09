@@ -411,21 +411,12 @@ int main(int argc, char **argv) {
                 break;
             default:
                 if (key >=32 && key <= 126) {
-                    if(p.line_length < LINE_CAPACITY &&
-                        p.line_length < (p.screen_cols-1)) {
-                            int tail_len = p.line_length - p.cursor_x;
-    
-                            memmove(
-                                &p.line[p.cursor_x + 1],
-                                &p.line[p.cursor_x],
-                                (size_t)tail_len
-                            );
-    
-                            p.line[p.cursor_x] = (char)key;
-                            p.line_length++;
-                            p.cursor_x++;
+                    if (insert_char(&p, key) == -1) {
+                        fprintf(stderr, "failed to insert character.\n");
+                        return 1;
                     }
                 }
+                break;
             }
     }
     
