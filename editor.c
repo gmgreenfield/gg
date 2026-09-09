@@ -288,6 +288,40 @@ int save_file(const editor_state *s) {
     return 0;
 }
 
+int insert_char(editor_state *s, int key) {
+    if(s->cursor_y < 0 || (size_t)s->cursor_y >= s->file_row_count) {
+        return -1;
+    }
+
+    editor_row *row = &s->file_rows[s->cursor_y];
+
+    if(s->cursor_x < 0 || (size_t)s->cursor_x > row->length) {
+        return -1;
+    }
+
+    char *new_chars = realloc(row->chars, row->length + 2);
+
+    if (new_chars == NULL) {
+        return -1;
+    }
+
+    row->chars = new_chars;
+
+    size_t position = (size_t)s->cursor_x;
+
+    memmove(
+        &row->chars[position+1],
+        &row->chars[position],
+        row->length - position + 1
+    );
+
+    row->chars[position] = (char)key;
+    row->length++;
+    s->cursor_x++;
+
+    return 0;
+}
+
 int main(int argc, char **argv) {
     editor_state p = {0};
     int key;
