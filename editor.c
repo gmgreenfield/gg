@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include <errno.h>
+#include <stdint.h>
 
 #define CTRL_KEY(k)     ((k) & 0x1f)
 
@@ -149,6 +150,7 @@ int read_key(void) {
                 if(s0 == 0) {
                     return '\x1b';
                 }
+
                 ssize_t s1 = read_byte(&seq[1]);
                 if(s1 == -1) {
                     perror("read");
@@ -179,6 +181,9 @@ int read_key(void) {
 }
 
 int append_row(editor_state *state, const char *chars, size_t length) {
+    if(length == SIZE_MAX)
+        return -1;
+
     char *copy = malloc(length + 1);
     if(copy == NULL) {
         return -1;
