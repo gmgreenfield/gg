@@ -8,7 +8,6 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 
-#define LINE_CAPACITY   256
 #define CTRL_KEY(k)     ((k) & 0x1f)
 
 struct termios original;
@@ -30,8 +29,6 @@ typedef struct {
     int cursor_y;
     int screen_rows;
     int screen_cols;
-    int line_length;
-    char line[LINE_CAPACITY];
     const char *filename;
     editor_row *file_rows;
     size_t file_row_count;
@@ -267,18 +264,35 @@ int save_file(const editor_state *s) {
         return -1;
     }
 
-    size_t written = fwrite(s->line, 1, (size_t)s->line_length, fd);
-    if(written != (size_t)s->line_length) {
-        if(ferror(fd)) {
-            perror("fwrite");
-        } else {
-            fprintf(stderr, "fwrite: short write\n");
+    for(size_t i = 0; i < s->file_row_count; i++) {
+        const editor_row *row = &s->file_rows[i];
+
+        size_t written = fwrite(
+            row->chars,
+            1,
+            row->length,
+            fd
+        );
+
+        if (written != row->length) {
+            if(ferror(fd)) {
+                perror("fwrite");
+            } else {
+                fprintf(stderr, "fwrite: short write\n");
+            }
+
+            fclose(fd);
+            return -1;
         }
 
-        fclose(fd);
-        return -1;
+        if (i + 1 < s->file_row_count) {
+            if (fputc('\n', fd) == EOF) {
+              perror("fputc");
+              fclose(fd);
+              return -1;
+            }
+        }
     }
-    
 
     if(fclose(fd) == EOF) {
         perror("fclose");
