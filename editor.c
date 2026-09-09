@@ -223,6 +223,9 @@ int load_file(editor_state *s) {
     }
 
     while ((nread = getline(&line, &len, stream)) != -1) {
+	s->file_ends_with_newline = 
+		nread > 0 && line[nread - 1] == '\n';
+
         while(nread > 0 &&
             (line[nread-1] == '\n' || line[nread-1] == '\r')) {
             nread--;
