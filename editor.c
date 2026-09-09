@@ -131,10 +131,8 @@ int read_key(void) {
     unsigned char key;
 
     while (1) {
-        ssize_t bytes_read = read(STDIN_FILENO, &key, 1);
-        if(bytes_read == -1 && errno == EINTR) {
-	    continue;
-        } else if (bytes_read == -1) {
+        ssize_t bytes_read = read_byte(&key);
+        if (bytes_read == -1) {
 	    perror("read");
 	    return -1;
        	} else if (bytes_read == 0) {
@@ -143,7 +141,7 @@ int read_key(void) {
             if(key == '\x1b') {
                 unsigned char seq[2];
 
-                ssize_t s0 = read(STDIN_FILENO, &seq[0], 1);
+                ssize_t s0 = read_byte(&seq[0]);
                 if(s0 == -1) {
                     perror("read");
                     return -1;
@@ -151,7 +149,7 @@ int read_key(void) {
                 if(s0 == 0) {
                     return '\x1b';
                 }
-                ssize_t s1 = read(STDIN_FILENO, &seq[1], 1);
+                ssize_t s1 = read_byte(&seq[1]);
                 if(s1 == -1) {
                     perror("read");
                     return -1;
