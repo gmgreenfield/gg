@@ -304,6 +304,11 @@ static void test_load_save(void) {
     check(state.final_newline != 0, "preserve final newline");
     check(save_file(&state) == 0, "save file");
 
+    char backup_path[sizeof(path) + 1];
+    snprintf(backup_path, sizeof(backup_path), "%s~", path);
+    check(access(backup_path, F_OK) == -1 && errno == ENOENT,
+          "successful save does not leave a persistent backup");
+
     struct stat saved;
     int stat_result = stat(path, &saved);
     check(stat_result == 0, "inspect saved file permissions");
