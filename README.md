@@ -24,3 +24,10 @@ this README with additional details as the project progresses.
 In Apple's Terminal on macOS, hold Shift when pressing Page Up or Page Down
 to send those keys to the editor. Alternatively, use `ctrl-b` and `ctrl-v`.
 The Control-key bindings work on both Linux and macOS; use Control, not Command.
+
+## Installation
+
+Run `make install` to build the editor and install it as `gg` in
+`~/.local/bin`. If that directory is not in your `PATH`, add it to your shell's
+`PATH` to run `gg` by name. To choose another installation directory, run
+`make install BINDIR=/path/to/bin`.

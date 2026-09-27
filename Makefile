@@ -4,11 +4,13 @@ CFLAGS := -std=c17 -Wall -Wextra -Wpedantic
 DEBUG_CFLAGS := ${CFLAGS} -g
 CC := gcc
 CLANG_FORMAT := clang-format
+PREFIX ?= $(HOME)/.local
+BINDIR ?= $(PREFIX)/bin
 
 gg: editor.c
 	${CC} ${CFLAGS} editor.c -o gg
 
-.PHONY: debug clean format format-check test
+.PHONY: debug clean format format-check test install
 debug: editor.c
 	${CC} ${DEBUG_CFLAGS} editor.c -o gg-debug
 
@@ -23,6 +25,10 @@ format-check:
 
 test: tests
 	./tests
+
+install: gg
+	install -d "$(DESTDIR)$(BINDIR)"
+	install -m 755 gg "$(DESTDIR)$(BINDIR)/gg"
 
 tests: tests.c editor.c
 	${CC} ${CFLAGS} tests.c -o tests
