@@ -18,7 +18,7 @@ this README with additional details as the project progresses.
 | `ctrl-b` or `pgup` | Move up by one screen of text |
 | `ctrl-v` or `pgdn` | Move down by one screen of text |
 | `ctrl-f` | Search for text and move to the next match |
-| `ctrl-s` | Save; prompt for a filename if the buffer is unnamed |
+| `ctrl-s` | Save; prompt for a filename if the buffer is unnamed (disabled with `-R`) |
 | `ctrl-q` | Quit; press it again to confirm when there are unsaved changes |
 
 In Apple's Terminal on macOS, hold Shift when pressing Page Up or Page Down
@@ -28,6 +28,23 @@ In the Save As prompt, press Enter to use the typed filename or Esc to cancel.
 If that filename already exists, the editor asks before replacing it.
 After a successful save, the status bar briefly displays the saved filename;
 the message disappears after about two seconds or on the next keypress.
+
+## Read-only viewing
+
+Use `-R` to view an existing file without changing it:
+
+```sh
+gg -R path/to/file
+```
+
+The status bar shows `[read-only]`. Navigation and search still work, but typing,
+Enter, Backspace, and Ctrl-S cannot change or save the file. Ctrl-Q exits without
+an unsaved-changes prompt. The flag requires a filename; reading piped input is
+not supported yet.
+
+To try it with a local build, run `./build/release/gg -R README.md`. Press a letter,
+Enter, Backspace, and Ctrl-S; each should show a read-only message without changing
+the text. Then move with the arrow keys, search with Ctrl-F, and quit with Ctrl-Q.
 
 ## Installation
 
