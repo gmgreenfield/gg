@@ -34,8 +34,8 @@ the message disappears after about two seconds or on the next keypress.
 Configure and build the editor, then install `gg` in `~/.local/bin`:
 
 ```sh
-cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
-cmake --build build/release
+cmake --preset release
+cmake --build --preset release
 cmake --install build/release --prefix "$HOME/.local"
 ```
 
@@ -45,12 +45,12 @@ name under that prefix, configure with `-DCMAKE_INSTALL_BINDIR=your-bin-dir`.
 
 ## Building and testing
 
-Build and run both test executables with CMake and CTest:
+Build and run both test executables with the project presets (CMake 3.20 or newer):
 
 ```sh
-cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
-cmake --build build/release
-(cd build/release && ctest --output-on-failure)
+cmake --preset release
+cmake --build --preset release
+ctest --preset release
 ```
 
 The file-I/O tests deliberately print errors such as "No space left on device"
@@ -59,17 +59,27 @@ while checking failed saves. A successful CTest run reports that both tests pass
 For a build with debugging symbols, use a separate build directory:
 
 ```sh
-cmake -S . -B build/debug -DCMAKE_BUILD_TYPE=Debug
-cmake --build build/debug
+cmake --preset debug
+cmake --build --preset debug
+ctest --preset debug
 ```
 
 The executables are `build/release/gg` and `build/debug/gg`. To check formatting
-without changing files, run `cmake --build build/release --target format-check`.
-To format the C sources and headers, use the `format` target instead. These two
-targets require `clang-format`; normal builds and tests do not. The GitHub
-workflow runs the same read-only formatting check. Run
-`cmake --build build/release --target clean` to remove compiled artifacts
-from that build directory.
+without changing files, run `cmake --build --preset format-check`. To format
+the C sources and headers, run `cmake --build --preset format`. These two
+presets require `clang-format`; normal builds and tests do not. The GitHub
+workflow runs the same read-only formatting check. Run `cmake --build --preset
+clean` to remove compiled artifacts from the release build directory.
+
+The presets are shortcuts for configuring, building, and testing in `build/`;
+they do not change the editor's minimum CMake requirement of 3.16. With CMake
+3.16–3.19, use the equivalent commands without presets, for example:
+
+```sh
+cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
+cmake --build build/release
+(cd build/release && ctest --output-on-failure)
+```
 
 ## Source layout
 
