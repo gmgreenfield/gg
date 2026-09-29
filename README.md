@@ -27,29 +27,45 @@ The Control-key bindings work on both Linux and macOS; use Control, not Command.
 
 ## Installation
 
-Run `make install` to build the editor and install it as `gg` in
-`~/.local/bin`. If that directory is not in your `PATH`, add it to your shell's
-`PATH` to run `gg` by name. To choose another installation directory, run
-`make install BINDIR=/path/to/bin`.
+Configure and build the editor, then install `gg` in `~/.local/bin`:
+
+```sh
+cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
+cmake --build build/release
+cmake --install build/release --prefix "$HOME/.local"
+```
+
+If `~/.local/bin` is not in your `PATH`, add it to run `gg` by name. Change
+the `--prefix` path to install somewhere else. To use a different directory
+name under that prefix, configure with `-DCMAKE_INSTALL_BINDIR=your-bin-dir`.
 
 ## Building and testing
 
-Run `make` to build `gg`, or `make debug` to build `gg-debug` with debugging
-symbols. Run `make test` to build and run `build/editor_tests`. The file-I/O
-tests deliberately print errors such as "No space left on device" while checking
-failed saves; a successful run ends with `all tests passed`.
-
-Run `make format` to format the C sources and headers, or `make format-check`
-to check formatting without changing files. The GitHub formatting workflow uses
-the same check. `make clean` removes the Make-built executables and test object.
-
-Alternatively, build and test with CMake:
+Build and run both test executables with CMake and CTest:
 
 ```sh
-cmake -S . -B build/cmake
-cmake --build build/cmake
-ctest --test-dir build/cmake --output-on-failure
+cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
+cmake --build build/release
+(cd build/release && ctest --output-on-failure)
 ```
+
+The file-I/O tests deliberately print errors such as "No space left on device"
+while checking failed saves. A successful CTest run reports that both tests passed.
+
+For a build with debugging symbols, use a separate build directory:
+
+```sh
+cmake -S . -B build/debug -DCMAKE_BUILD_TYPE=Debug
+cmake --build build/debug
+```
+
+The executables are `build/release/gg` and `build/debug/gg`. To check formatting
+without changing files, run `cmake --build build/release --target format-check`.
+To format the C sources and headers, use the `format` target instead. These two
+targets require `clang-format`; normal builds and tests do not. The GitHub
+workflow runs the same read-only formatting check. Run
+`cmake --build build/release --target clean` to remove compiled artifacts
+from that build directory.
 
 ## Source layout
 
@@ -60,8 +76,10 @@ ctest --test-dir build/cmake --output-on-failure
 - `tests/test_buffer.c`, `test_navigation.c`, `test_search.c`, and `test_file_io.c`:
   tests grouped by feature.
 - `tests/test_main.c` and `test_helpers.c`/`.h`: the test runner and shared assertions.
+- `tests/test_main_loop.c`: tests for the editor's main loop.
 
 The tests include headers and link separately compiled implementation files.
 Only the test build of `src/file_io.c` redirects `fwrite()` and `rename()` to
 failure-injection wrappers; the normal editor and test fixtures use the real
-library functions. All test groups run in one executable.
+library functions. CTest runs the editor and main-loop tests as separate
+executables.
