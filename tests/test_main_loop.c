@@ -10,26 +10,55 @@
 
 int editor_program_main(int argc, char **argv);
 
+enum test_scenario {
+    NAMED_SAVE_FAILURE,
+    NAMED_SAVE_RETRY,
+    NAMED_SAVE_THEN_EDIT,
+    UNNAMED_SAVE_SUCCESS,
+    UNNAMED_SAVE_CANCEL,
+    UNNAMED_SAVE_FAILURE
+};
+
+static enum test_scenario scenario;
 static int reads;
 static int saves;
+static int prompts;
+static int timed_reads;
+static int successful_save;
 static int saw_dirty_after_failed_save;
 static int saw_error_status_after_failed_save;
 static int saw_edit_after_failed_save;
 static int saw_unsaved_quit_prompt;
-static int retry_succeeds;
 static int saw_clean_after_retry;
 static int saw_error_cleared_after_retry;
+static int saw_saved_status;
+static int saw_status_expired;
+static int saw_status_cleared_on_edit;
+static int saw_prompt_while_unnamed;
+static int saw_unnamed_save_target;
+static int saw_unnamed_clean_after_save;
+static int saw_unnamed_after_failed_save;
 
-static void reset_scenario(int succeed_on_retry) {
+static void reset_scenario(enum test_scenario next_scenario) {
+    scenario = next_scenario;
     reads = 0;
     saves = 0;
+    prompts = 0;
+    timed_reads = 0;
+    successful_save = 0;
     saw_dirty_after_failed_save = 0;
     saw_error_status_after_failed_save = 0;
     saw_edit_after_failed_save = 0;
     saw_unsaved_quit_prompt = 0;
-    retry_succeeds = succeed_on_retry;
     saw_clean_after_retry = 0;
     saw_error_cleared_after_retry = 0;
+    saw_saved_status = 0;
+    saw_status_expired = 0;
+    saw_status_cleared_on_edit = 0;
+    saw_prompt_while_unnamed = 0;
+    saw_unnamed_save_target = 0;
+    saw_unnamed_clean_after_save = 0;
+    saw_unnamed_after_failed_save = 0;
 }
 
 int load_file(editor_state *s) { return append_row(s, "original", 8); }
@@ -38,7 +67,12 @@ int save_file(const editor_state *s) {
     saves++;
     check(s->dirty && strcmp(s->file_rows[0].chars, "xoriginal") == 0,
           "save receives the modified buffer");
-    if (retry_succeeds && saves == 2) {
+    if (scenario == UNNAMED_SAVE_SUCCESS || scenario == UNNAMED_SAVE_FAILURE) {
+        saw_unnamed_save_target = s->filename != NULL && strcmp(s->filename, "new-document") == 0;
+    }
+    if ((scenario == NAMED_SAVE_RETRY && saves == 2) || scenario == NAMED_SAVE_THEN_EDIT ||
+        scenario == UNNAMED_SAVE_SUCCESS) {
+        successful_save = 1;
         return 0;
     }
     errno = ENOSPC;
@@ -58,16 +92,17 @@ int get_window_size(int *rows, int *cols) {
 }
 
 void refresh_screen(const editor_state *s) {
-    if (saves == 0 || s->file_row_count == 0) {
+    if (s->file_row_count == 0) {
         return;
     }
 
-    if (reads == 2) {
+    if (saves > 0 && reads == 2) {
         saw_dirty_after_failed_save = s->dirty;
-        saw_error_status_after_failed_save = s->status_message != NULL;
+        saw_error_status_after_failed_save =
+            s->status_message != NULL && strstr(s->status_message, "Save failed") != NULL;
     }
 
-    if (retry_succeeds && saves == 2 && reads == 3) {
+    if (scenario == NAMED_SAVE_RETRY && saves == 2 && reads == 3) {
         saw_clean_after_retry = !s->dirty;
         saw_error_cleared_after_retry =
             s->status_message == NULL || strstr(s->status_message, "Save failed") == NULL;
@@ -80,18 +115,63 @@ void refresh_screen(const editor_state *s) {
     if (s->status_message != NULL && strstr(s->status_message, "Unsaved changes") != NULL) {
         saw_unsaved_quit_prompt = 1;
     }
+
+    if (s->status_message != NULL && strstr(s->status_message, "Saved") != NULL) {
+        saw_saved_status = 1;
+    }
+    if (successful_save && timed_reads >= 20 && s->status_message == NULL) {
+        saw_status_expired = 1;
+    }
+    if (scenario == NAMED_SAVE_THEN_EDIT && s->dirty && s->status_message == NULL &&
+        strcmp(s->file_rows[0].chars, "xyoriginal") == 0) {
+        saw_status_cleared_on_edit = 1;
+    }
+    if (scenario == UNNAMED_SAVE_SUCCESS && successful_save && s->filename != NULL &&
+        strcmp(s->filename, "new-document") == 0 && !s->dirty) {
+        saw_unnamed_clean_after_save = 1;
+    }
+    if (scenario == UNNAMED_SAVE_FAILURE && saves == 1 && s->filename == NULL && s->dirty) {
+        saw_unnamed_after_failed_save = 1;
+    }
 }
 
 int read_key(void) {
     static const int failure_keys[] = {'x', CTRL_KEY('s'), 'y', CTRL_KEY('q'), CTRL_KEY('q')};
     static const int retry_keys[] = {'x', CTRL_KEY('s'), CTRL_KEY('s'), CTRL_KEY('q')};
-    const int *keys = retry_succeeds ? retry_keys : failure_keys;
-    size_t key_count = retry_succeeds ? sizeof(retry_keys) / sizeof(retry_keys[0])
-                                      : sizeof(failure_keys) / sizeof(failure_keys[0]);
+    static const int edit_after_save_keys[] = {'x', CTRL_KEY('s'), 'y', CTRL_KEY('q'),
+                                               CTRL_KEY('q')};
+    static const int unnamed_success_keys[] = {'x', CTRL_KEY('s'), CTRL_KEY('q')};
+    static const int unnamed_failure_keys[] = {'x', CTRL_KEY('s'), CTRL_KEY('q'), CTRL_KEY('q')};
+    const int *keys = failure_keys;
+    size_t key_count = sizeof(failure_keys) / sizeof(failure_keys[0]);
+    if (scenario == NAMED_SAVE_RETRY) {
+        keys = retry_keys;
+        key_count = sizeof(retry_keys) / sizeof(retry_keys[0]);
+    } else if (scenario == NAMED_SAVE_THEN_EDIT) {
+        keys = edit_after_save_keys;
+        key_count = sizeof(edit_after_save_keys) / sizeof(edit_after_save_keys[0]);
+    } else if (scenario == UNNAMED_SAVE_SUCCESS) {
+        keys = unnamed_success_keys;
+        key_count = sizeof(unnamed_success_keys) / sizeof(unnamed_success_keys[0]);
+    } else if (scenario == UNNAMED_SAVE_CANCEL || scenario == UNNAMED_SAVE_FAILURE) {
+        keys = unnamed_failure_keys;
+        key_count = sizeof(unnamed_failure_keys) / sizeof(unnamed_failure_keys[0]);
+    }
     if ((size_t)reads >= key_count) {
         return -1;
     }
     return keys[reads++];
+}
+
+int read_key_with_timeout(void) {
+    if (scenario == NAMED_SAVE_THEN_EDIT) {
+        return read_key();
+    }
+    if (timed_reads < 20) {
+        timed_reads++;
+        return KEY_TIMEOUT;
+    }
+    return read_key();
 }
 
 int search_prompt(editor_state *s) {
@@ -99,11 +179,29 @@ int search_prompt(editor_state *s) {
     return 0;
 }
 
-int main(void) {
-    char *argv[] = {"gg", "document", NULL};
+int save_as_prompt(editor_state *s, char **filename_out) {
+    prompts++;
+    saw_prompt_while_unnamed = s->filename == NULL;
+    *filename_out = NULL;
+    if (scenario == UNNAMED_SAVE_CANCEL) {
+        return 0;
+    }
 
-    reset_scenario(0);
-    int result = editor_program_main(2, argv);
+    const char path[] = "new-document";
+    *filename_out = malloc(sizeof(path));
+    if (*filename_out == NULL) {
+        return -1;
+    }
+    memcpy(*filename_out, path, sizeof(path));
+    return 1;
+}
+
+int main(void) {
+    char *named_argv[] = {"gg", "document", NULL};
+    char *unnamed_argv[] = {"gg", NULL};
+
+    reset_scenario(NAMED_SAVE_FAILURE);
+    int result = editor_program_main(2, named_argv);
 
     check(saves == 1, "Ctrl-S attempts one save");
     check(reads == 5, "a failed save does not exit the editor");
@@ -112,9 +210,10 @@ int main(void) {
     check(saw_edit_after_failed_save, "editing remains possible after a failed save");
     check(saw_unsaved_quit_prompt, "quitting after a failed save still requires confirmation");
     check(result == EXIT_SUCCESS, "confirmed quit exits normally after the failed save");
+    check(prompts == 0, "saving a named file does not ask for a filename");
 
-    reset_scenario(1);
-    result = editor_program_main(2, argv);
+    reset_scenario(NAMED_SAVE_RETRY);
+    result = editor_program_main(2, named_argv);
 
     check(saves == 2, "Ctrl-S retries saving after the first failure");
     check(reads == 4, "a successful retry allows quitting with one Ctrl-Q");
@@ -122,8 +221,43 @@ int main(void) {
     check(saw_error_status_after_failed_save, "the first failed attempt shows an error");
     check(saw_clean_after_retry, "successful retry clears the modified flag");
     check(saw_error_cleared_after_retry, "successful retry removes the stale save error");
+    check(saw_saved_status, "successful save displays confirmation");
+    check(saw_status_expired, "save confirmation disappears without another keypress");
+    check(timed_reads == 20, "save confirmation has a bounded display time");
     check(!saw_unsaved_quit_prompt, "successful retry needs no unsaved-changes warning");
     check(result == EXIT_SUCCESS, "quit succeeds after a successful retry");
+
+    reset_scenario(NAMED_SAVE_THEN_EDIT);
+    result = editor_program_main(2, named_argv);
+    check(saw_saved_status, "successful save displays confirmation before further editing");
+    check(saw_status_cleared_on_edit,
+          "next edit immediately dismisses stale save confirmation and marks buffer dirty");
+    check(saw_unsaved_quit_prompt && result == EXIT_SUCCESS,
+          "editing after a save requires confirmation before quitting");
+
+    reset_scenario(UNNAMED_SAVE_SUCCESS);
+    result = editor_program_main(1, unnamed_argv);
+    check(prompts == 1 && saw_prompt_while_unnamed,
+          "Ctrl-S prompts for a filename in an unnamed buffer");
+    check(saves == 1 && saw_unnamed_save_target, "unnamed buffer saves to the entered filename");
+    check(saw_unnamed_clean_after_save, "successful unnamed save names and cleans the buffer");
+    check(saw_saved_status && saw_status_expired, "unnamed save shows a temporary confirmation");
+    check(!saw_unsaved_quit_prompt && result == EXIT_SUCCESS,
+          "saved unnamed buffer quits without an unsaved-changes warning");
+
+    reset_scenario(UNNAMED_SAVE_CANCEL);
+    result = editor_program_main(1, unnamed_argv);
+    check(prompts == 1 && saves == 0, "cancelled Save As does not write a file");
+    check(saw_unsaved_quit_prompt && result == EXIT_SUCCESS,
+          "cancelled Save As leaves the buffer unsaved");
+
+    reset_scenario(UNNAMED_SAVE_FAILURE);
+    result = editor_program_main(1, unnamed_argv);
+    check(prompts == 1 && saves == 1 && saw_unnamed_save_target,
+          "failed Save As attempts the chosen filename");
+    check(saw_unnamed_after_failed_save && saw_unsaved_quit_prompt,
+          "failed Save As keeps the unnamed buffer dirty");
+    check(result == EXIT_SUCCESS, "confirmed quit works after failed Save As");
 
     if (test_failure_count() != 0) {
         fprintf(stderr, "%d main-loop test(s) failed\n", test_failure_count());

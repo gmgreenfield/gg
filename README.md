@@ -18,12 +18,16 @@ this README with additional details as the project progresses.
 | `ctrl-b` or `pgup` | Move up by one screen of text |
 | `ctrl-v` or `pgdn` | Move down by one screen of text |
 | `ctrl-f` | Search for text and move to the next match |
-| `ctrl-s` | Save the current file |
+| `ctrl-s` | Save; prompt for a filename if the buffer is unnamed |
 | `ctrl-q` | Quit; press it again to confirm when there are unsaved changes |
 
 In Apple's Terminal on macOS, hold Shift when pressing Page Up or Page Down
 to send those keys to the editor. Alternatively, use `ctrl-b` and `ctrl-v`.
 The Control-key bindings work on both Linux and macOS; use Control, not Command.
+In the Save As prompt, press Enter to use the typed filename or Esc to cancel.
+If that filename already exists, the editor asks before replacing it.
+After a successful save, the status bar briefly displays the saved filename;
+the message disappears after about two seconds or on the next keypress.
 
 ## Installation
 

@@ -184,7 +184,8 @@ int save_file(const editor_state *s) {
     }
 
     if (s->filename == NULL) {
-        return 0;
+        errno = EINVAL;
+        return -1;
     }
 
     mode_t output_mode;

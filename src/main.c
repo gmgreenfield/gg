@@ -11,10 +11,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+enum { SAVE_NOTICE_TICKS = 20 };
+
 int main(int argc, char **argv) {
     editor_state p = {0};
+    char *owned_filename = NULL;
+    char save_status[256];
     int key;
     int exit_status = EXIT_SUCCESS;
+    int notice_ticks = 0;
 
     if (argc > 2) {
         fprintf(stderr, "usage: %s [filename]\n", argv[0]);
@@ -83,10 +88,30 @@ int main(int argc, char **argv) {
 
         scroll_cursor(&p);
         refresh_screen(&p);
-        key = read_key();
+
+        if (notice_ticks > 0) {
+            do {
+                key = read_key_with_timeout();
+                if (key == KEY_TIMEOUT) {
+                    notice_ticks--;
+                }
+            } while (key == KEY_TIMEOUT && notice_ticks > 0);
+
+            if (key == KEY_TIMEOUT) {
+                p.status_message = NULL;
+                continue;
+            }
+        } else {
+            key = read_key();
+        }
 
         if (key == KEY_RESIZE) {
             continue;
+        }
+
+        if (notice_ticks > 0) {
+            notice_ticks = 0;
+            p.status_message = NULL;
         }
 
         if (key == -1) {
@@ -149,16 +174,40 @@ int main(int argc, char **argv) {
                 goto cleanup;
             }
             break;
-        case CTRL_KEY('s'):
+        case CTRL_KEY('s'): {
+            char *new_filename = NULL;
+            if (p.filename == NULL) {
+                int prompt_result = save_as_prompt(&p, &new_filename);
+                if (prompt_result == -1) {
+                    exit_status = EXIT_FAILURE;
+                    goto cleanup;
+                }
+                if (prompt_result == 0) {
+                    p.status_message = "Save cancelled.";
+                    notice_ticks = SAVE_NOTICE_TICKS;
+                    break;
+                }
+                p.filename = new_filename;
+            }
+
             if (save_file(&p) == -1) {
+                if (new_filename != NULL) {
+                    p.filename = NULL;
+                    free(new_filename);
+                }
                 p.status_message = "Save failed; changes remain unsaved.";
                 break;
             }
-            p.status_message = NULL;
-            if (p.filename != NULL) {
-                p.dirty = 0;
+
+            if (new_filename != NULL) {
+                owned_filename = new_filename;
             }
+            p.dirty = 0;
+            snprintf(save_status, sizeof(save_status), "Saved: %s", p.filename);
+            p.status_message = save_status;
+            notice_ticks = SAVE_NOTICE_TICKS;
             break;
+        }
         case 127:
         case CTRL_KEY('h'):
             if (delete_char(&p) == -1) {
@@ -203,5 +252,6 @@ int main(int argc, char **argv) {
 
 cleanup:
     free_rows(&p);
+    free(owned_filename);
     return exit_status;
 }

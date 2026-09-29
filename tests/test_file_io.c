@@ -97,6 +97,18 @@ static void test_load_save(void) {
     unlink(path);
 }
 
+static void test_unnamed_save_is_not_reported_as_success(void) {
+    editor_state state = {.dirty = 1};
+    check(append_row(&state, "unsaved", 7) == 0, "prepare unnamed buffer");
+
+    errno = 0;
+    check(save_file(&state) == -1 && errno == EINVAL,
+          "saving without a filename reports an error instead of false success");
+    check(state.dirty == 1, "failed unnamed save leaves the buffer dirty");
+
+    free_rows(&state);
+}
+
 static void test_failed_save_preserves_original(void) {
     char path[] = "/tmp/gg-save-failure-XXXXXX";
     int fd = mkstemp(path);
@@ -273,6 +285,7 @@ cleanup:
 
 void test_file_io(void) {
     test_load_save();
+    test_unnamed_save_is_not_reported_as_success();
     test_failed_save_preserves_original();
     test_save_fault(SAVE_FAULT_WRITE);
     test_save_fault(SAVE_FAULT_RENAME);
