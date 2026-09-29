@@ -24,6 +24,11 @@ if(BUILD_TESTING)
 
     add_executable(editor_tests
         tests/test_main.c
+        tests/test_helpers.c
+        tests/test_buffer.c
+        tests/test_navigation.c
+        tests/test_search.c
+        tests/test_file_io.c
         $<TARGET_OBJECTS:test_file_io>
     )
     target_link_libraries(editor_tests PRIVATE editor_core)
