@@ -33,4 +33,15 @@ if(BUILD_TESTING)
     )
     target_link_libraries(editor_tests PRIVATE editor_core)
     add_test(NAME editor_tests COMMAND editor_tests)
+
+    add_library(test_main_loop_main OBJECT src/main.c)
+    target_compile_definitions(test_main_loop_main PRIVATE main=editor_program_main)
+
+    add_executable(main_loop_tests
+        tests/test_main_loop.c
+        tests/test_helpers.c
+        $<TARGET_OBJECTS:test_main_loop_main>
+    )
+    target_link_libraries(main_loop_tests PRIVATE editor_core)
+    add_test(NAME main_loop_tests COMMAND main_loop_tests)
 endif()

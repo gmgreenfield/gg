@@ -151,9 +151,10 @@ int main(int argc, char **argv) {
             break;
         case CTRL_KEY('s'):
             if (save_file(&p) == -1) {
-                exit_status = EXIT_FAILURE;
-                goto cleanup;
+                p.status_message = "Save failed; changes remain unsaved.";
+                break;
             }
+            p.status_message = NULL;
             if (p.filename != NULL) {
                 p.dirty = 0;
             }
