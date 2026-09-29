@@ -152,6 +152,48 @@ static void test_read_only_buffer_cannot_save(void) {
     check(unlink(path) == 0, "remove read-only save fixture");
 }
 
+static void test_read_only_stdin_load(void) {
+    int pipe_fds[2];
+    int pipe_result = pipe(pipe_fds);
+    check(pipe_result == 0, "create piped-input fixture");
+    if (pipe_result == -1) {
+        return;
+    }
+
+    const char input[] = "first\nsecond\n";
+    check(write(pipe_fds[1], input, sizeof(input) - 1) == (ssize_t)(sizeof(input) - 1),
+          "write piped-input fixture");
+    check(close(pipe_fds[1]) == 0, "close pipe writer");
+
+    pid_t child = fork();
+    check(child != -1, "start piped-input reader");
+    if (child == 0) {
+        if (dup2(pipe_fds[0], STDIN_FILENO) == -1) {
+            _exit(2);
+        }
+        close(pipe_fds[0]);
+        clearerr(stdin);
+        editor_state state = {.filename = "-", .read_only = 1};
+        int loaded = load_file(&state) == 0 && state.file_row_count == 2 &&
+                     strcmp(state.file_rows[0].chars, "first") == 0 &&
+                     strcmp(state.file_rows[1].chars, "second") == 0 && state.final_newline &&
+                     fcntl(STDIN_FILENO, F_GETFD) != -1;
+        free_rows(&state);
+        _exit(loaded ? 0 : 1);
+    }
+
+    check(close(pipe_fds[0]) == 0, "close parent pipe reader");
+    if (child > 0) {
+        int status;
+        pid_t waited;
+        do {
+            waited = waitpid(child, &status, 0);
+        } while (waited == -1 && errno == EINTR);
+        check(waited == child && WIFEXITED(status) && WEXITSTATUS(status) == 0,
+              "-R - loads piped lines without closing standard input");
+    }
+}
+
 static void test_failed_save_preserves_original(void) {
     char path[] = "/tmp/gg-save-failure-XXXXXX";
     int fd = mkstemp(path);
@@ -331,6 +373,7 @@ void test_file_io(void) {
     test_unnamed_save_is_not_reported_as_success();
     test_read_only_missing_file_is_an_error();
     test_read_only_buffer_cannot_save();
+    test_read_only_stdin_load();
     test_failed_save_preserves_original();
     test_save_fault(SAVE_FAULT_WRITE);
     test_save_fault(SAVE_FAULT_RENAME);

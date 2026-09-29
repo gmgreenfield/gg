@@ -22,8 +22,9 @@ int load_file(editor_state *s) {
     char *line = NULL;
     size_t len = 0;
     ssize_t nread;
+    int from_stdin = s->read_only && strcmp(s->filename, "-") == 0;
 
-    stream = fopen(s->filename, "r");
+    stream = from_stdin ? stdin : fopen(s->filename, "r");
     if (stream == NULL) {
         if (errno == ENOENT && !s->read_only) {
             return 0;
@@ -43,7 +44,7 @@ int load_file(editor_state *s) {
         if (append_row(s, line, (size_t)nread) == -1) {
             fprintf(stderr, "Failed to append row.\n");
             free(line);
-            if (fclose(stream) == EOF) {
+            if (!from_stdin && fclose(stream) == EOF) {
                 perror("fclose");
             }
             return -1;
@@ -53,12 +54,14 @@ int load_file(editor_state *s) {
     if (ferror(stream)) {
         perror("getline");
         free(line);
-        fclose(stream);
+        if (!from_stdin) {
+            fclose(stream);
+        }
         return -1;
     }
 
     free(line);
-    if (fclose(stream) == EOF) {
+    if (!from_stdin && fclose(stream) == EOF) {
         perror("fclose");
         return -1;
     }

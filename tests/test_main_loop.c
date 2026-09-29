@@ -44,6 +44,10 @@ static int saw_read_only_mode;
 static int saw_read_only_notice;
 static int saw_read_only_change;
 static int saw_read_only_navigation;
+static int tty_selections;
+static int raw_mode_calls;
+static int fail_tty_selection;
+static int saw_stdin_filename;
 
 static void reset_scenario(enum test_scenario next_scenario) {
     scenario = next_scenario;
@@ -70,9 +74,14 @@ static void reset_scenario(enum test_scenario next_scenario) {
     saw_read_only_notice = 0;
     saw_read_only_change = 0;
     saw_read_only_navigation = 0;
+    tty_selections = 0;
+    raw_mode_calls = 0;
+    fail_tty_selection = 0;
+    saw_stdin_filename = 0;
 }
 
 int load_file(editor_state *s) {
+    saw_stdin_filename = s->filename != NULL && strcmp(s->filename, "-") == 0;
     if (append_row(s, "original", 8) == -1) {
         return -1;
     }
@@ -98,7 +107,15 @@ int save_file(const editor_state *s) {
     return -1;
 }
 
-int enable_raw_mode(void) { return 0; }
+int use_tty_input(void) {
+    tty_selections++;
+    return fail_tty_selection ? -1 : 0;
+}
+
+int enable_raw_mode(void) {
+    raw_mode_calls++;
+    return 0;
+}
 
 void handle_resize(int signal_number) { (void)signal_number; }
 
@@ -236,6 +253,7 @@ int main(void) {
     char *named_argv[] = {"gg", "document", NULL};
     char *unnamed_argv[] = {"gg", NULL};
     char *read_only_argv[] = {"gg", "-R", "document", NULL};
+    char *read_only_stdin_argv[] = {"gg", "-R", "-", NULL};
     char *missing_read_only_filename_argv[] = {"gg", "-R", NULL};
 
     reset_scenario(NAMED_SAVE_FAILURE);
@@ -307,6 +325,20 @@ int main(void) {
     check(saw_read_only_navigation && searches == 1,
           "navigation and search remain available in read-only mode");
     check(!saw_unsaved_quit_prompt, "read-only mode quits without an unsaved warning");
+    check(tty_selections == 0, "viewing a regular file uses normal keyboard input");
+
+    reset_scenario(READ_ONLY);
+    result = editor_program_main(3, read_only_stdin_argv);
+    check(result == EXIT_SUCCESS && saw_stdin_filename, "-R - accepts standard input");
+    check(tty_selections == 1 && raw_mode_calls == 1,
+          "piped viewer switches keyboard input to the controlling terminal");
+    check(!saw_read_only_change && saves == 0 && prompts == 0, "piped viewer remains read-only");
+
+    reset_scenario(READ_ONLY);
+    fail_tty_selection = 1;
+    result = editor_program_main(3, read_only_stdin_argv);
+    check(result == EXIT_FAILURE && tty_selections == 1 && raw_mode_calls == 0 && reads == 0,
+          "piped viewer exits before raw mode if no terminal is available");
 
     reset_scenario(READ_ONLY);
     result = editor_program_main(2, missing_read_only_filename_argv);

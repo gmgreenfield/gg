@@ -6,6 +6,7 @@
 #include "terminal.h"
 
 #include <errno.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +17,24 @@
 
 static volatile sig_atomic_t resize_pending;
 static struct termios original;
+static int input_fd = STDIN_FILENO;
+static int tty_input_fd = -1;
+
+int use_tty_input(void) {
+    int fd = open("/dev/tty", O_RDWR);
+    if (fd == -1) {
+        if (errno == ENXIO || errno == ENOTTY) {
+            fprintf(stderr, "Piped viewing requires a controlling terminal (/dev/tty).\n");
+        } else {
+            perror("/dev/tty");
+        }
+        return -1;
+    }
+
+    input_fd = fd;
+    tty_input_fd = fd;
+    return 0;
+}
 
 void handle_resize(int signal_number) {
     (void)signal_number;
@@ -119,13 +138,16 @@ int get_window_size(int *rows, int *cols) {
 static void restore_original(void) {
     printf("\x1b[2J\x1b[H\x1b[?25h");
     fflush(stdout);
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &original) == -1) {
+    if (tcsetattr(input_fd, TCSAFLUSH, &original) == -1) {
         perror("tcsetattr");
+    }
+    if (tty_input_fd != -1) {
+        close(tty_input_fd);
     }
 }
 
 int enable_raw_mode(void) {
-    if (!tcgetattr(STDIN_FILENO, &original)) {
+    if (!tcgetattr(input_fd, &original)) {
         if (atexit(restore_original) != 0) {
             fprintf(stderr, "Failed to register terminal restoration.\n");
             return -1;
@@ -144,7 +166,7 @@ int enable_raw_mode(void) {
     raw.c_cc[VMIN] = 0;
     raw.c_cc[VTIME] = 1;
 
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
+    if (tcsetattr(input_fd, TCSAFLUSH, &raw) == -1) {
         perror("tcsetattr");
         return -1;
     }
@@ -154,7 +176,7 @@ int enable_raw_mode(void) {
 
 static ssize_t read_byte(unsigned char *byte) {
     while (1) {
-        ssize_t bytes_read = read(STDIN_FILENO, byte, 1);
+        ssize_t bytes_read = read(input_fd, byte, 1);
         if (bytes_read == -1 && errno == EINTR) {
             continue;
         } else if (bytes_read == -1) {

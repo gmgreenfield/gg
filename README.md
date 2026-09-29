@@ -39,12 +39,23 @@ gg -R path/to/file
 
 The status bar shows `[read-only]`. Navigation and search still work, but typing,
 Enter, Backspace, and Ctrl-S cannot change or save the file. Ctrl-Q exits without
-an unsaved-changes prompt. The flag requires a filename; reading piped input is
-not supported yet.
+an unsaved-changes prompt.
+
+To view output from a command, use `-` in place of the filename:
+
+```sh
+some-command | gg -R -
+```
+
+The command must finish before `gg` opens the viewer. Keyboard input still comes
+from your terminal, so this form needs an interactive terminal. It does not
+follow live output from commands such as `tail -f`.
 
 To try it with a local build, run `./build/release/gg -R README.md`. Press a letter,
 Enter, Backspace, and Ctrl-S; each should show a read-only message without changing
 the text. Then move with the arrow keys, search with Ctrl-F, and quit with Ctrl-Q.
+To test piped input, run `printf 'first\nsecond\n' | ./build/release/gg -R -`
+and check that both lines appear with the same read-only behavior.
 
 ## Installation
 

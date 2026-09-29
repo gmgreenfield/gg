@@ -20,6 +20,7 @@ enum editor_key {
 
 void handle_resize(int signal_number);
 int take_resize_pending(void);
+int use_tty_input(void);
 int enable_raw_mode(void);
 int get_window_size(int *rows, int *cols);
 int read_key(void);

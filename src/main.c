@@ -38,6 +38,11 @@ int main(int argc, char **argv) {
         goto cleanup;
     }
 
+    if (p.read_only && strcmp(p.filename, "-") == 0 && use_tty_input() == -1) {
+        exit_status = EXIT_FAILURE;
+        goto cleanup;
+    }
+
     if (load_file(&p) == -1) {
         exit_status = EXIT_FAILURE;
         goto cleanup;
