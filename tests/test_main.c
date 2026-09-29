@@ -3,25 +3,24 @@
 #endif
 #define _POSIX_C_SOURCE 200809L
 
-#include <stdio.h>
-
-/* Redirect only the editor's calls; the test fixtures use real file I/O. */
-size_t test_save_fwrite(const void *data, size_t size, size_t count, FILE *stream);
-int test_save_rename(const char *old_path, const char *new_path);
-
-#define fwrite test_save_fwrite
-#define rename test_save_rename
-#define main editor_program_main
-#include "../src/editor.c"
-#undef main
-#undef rename
-#undef fwrite
+#include "editor.h"
+#include "file_io.h"
 
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <unistd.h>
+
+/* Only the test build of file_io.c redirects these calls. Fixtures use libc. */
+size_t test_save_fwrite(const void *data, size_t size, size_t count, FILE *stream);
+int test_save_rename(const char *old_path, const char *new_path);
 
 static int failures;
 
