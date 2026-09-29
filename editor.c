@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
 #ifdef __APPLE__
@@ -305,7 +306,7 @@ int enable_raw_mode(void) {
 ssize_t read_byte(unsigned char *byte) {
     while (1) {
         ssize_t bytes_read = read(STDIN_FILENO, byte, 1);
-        if (bytes_read == -1 && errno == EINTR) {
+        if (bytes_read == -1 && err_no == EINTR) {
             continue;
         } else if (bytes_read == -1) {
             return -1;
@@ -464,7 +465,7 @@ int load_file(editor_state *s) {
 
     stream = fopen(s->filename, "r");
     if (stream == NULL) {
-        if (errno == ENOENT) {
+        if (err_no == ENOENT) {
             return 0;
         } else {
             perror(s->filename);
@@ -505,54 +506,168 @@ int load_file(editor_state *s) {
     return 0;
 }
 
-int save_file(const editor_state *s) {
-    if (s->filename == NULL)
-        return 0;
+static int write_buffer_to_stream(FILE *stream, const editor_state *s) {
+    for (size_t i = 0; i < s->file_row_count; i++) {
+        const editor_row *row = &s->file_rows[i];
 
-    FILE *fd = fopen(s->filename, "w");
-    if (fd == NULL) {
+        if (fwrite(row->chars, sizeof(char), row->length, stream) != row->length) {
+            if (err_no == 0) {
+                err_no = EIO;
+            }
+            perror("fwrite");
+            return -1;
+        }
+
+        if (i+1 < s->file_row_count && fputc('\n', stream) == EOF) {
+            if (error_no == 0) {
+                error_no = EIO;
+            }
+            perror("fputc");
+            return -1;
+        }
+    }
+
+    if (s->final_newline && fputc('\n', stream) == EOF) {
+        if (error_no == 0) {
+            error_no = EIO;
+        }
+        perror("fputc");
+        return -1;
+    }
+
+    return 0;
+}
+
+int save_file(editor_state *s) {
+        if (s == NULL) {
+        err_no = EINVAL;
+        return -1;
+    }
+
+    if (s->filename == NULL) {
+        return 0;
+    }
+
+    /*
+     * replacing a symlink with rename() would break the link. This basic
+     * version handles regular files and new files; reject other file types
+     * instead of silently changing their behavior.
+     * TODO it's going to have to be more robust in handling symlinks in a later release.
+     */
+    struct stat original_stat;
+    int original_exists = 0;
+
+    if (lstat(s->filename, &original_stat) == 0) {
+        if (!S_ISREG(original_stat.st_mode)) {
+            err_no = EINVAL;
+            perror("save_file: not a regular file");
+            return -1;
+        }
+        original_exists = 1;
+    } else if (err_no != ENOENT) {
         perror(s->filename);
         return -1;
     }
 
-    for (size_t i = 0; i < s->file_row_count; i++) {
-        const editor_row *row = &s->file_rows[i];
+    static const char suffix[] = ".gg-tmp-XXXXXX";
+    size_t filename_length = strlen(s->filename);
 
-        size_t written = fwrite(row->chars, 1, row->length, fd);
-
-        if (written != row->length) {
-            if (ferror(fd)) {
-                perror("fwrite");
-            } else {
-                fprintf(stderr, "fwrite: short write\n");
-            }
-
-            fclose(fd);
-            return -1;
-        }
-
-        if (i + 1 < s->file_row_count) {
-            if (fputc('\n', fd) == EOF) {
-                perror("fputc");
-                fclose(fd);
-                return -1;
-            }
-        }
-    }
-
-    if (s->final_newline) {
-        if (fputc('\n', fd) == EOF) {
-            perror("fputc");
-            fclose(fd);
-            return -1;
-        }
-    }
-
-    if (fclose(fd) == EOF) {
-        perror("fclose");
+    if (filename_length > SIZE_MAX - sizeof(suffix)) {
+        err_no = ENAMETOOLONG;
+        perror("save_file");
         return -1;
     }
 
+    char *temp_path = malloc(filename_length + sizeof(suffix));
+    if (temp_path == NULL) {
+        perror("malloc");
+        return -1;
+    }
+
+    memcpy(temp_path, s->filename, filename_length);
+    memcpy(temp_path + filename_length, suffix, sizeof(suffix));
+
+    int temp_fd = mkstemp(temp_path);
+    if (temp_fd == -1) {
+        perror("mkstemp");
+        free(temp_path);
+        return -1;
+    }
+
+    FILE *stream = fdopen(temp_fd, "w");
+    if (stream == NULL) {
+        int saved_errno = err_no;
+        perror("fdopen");
+        close(temp_fd);
+        unlink(temp_path);
+        free(temp_path);
+        err_no = saved_errno;
+        return -1;
+    }
+
+    int failed = 0;
+    int saved_errno = 0;
+
+    if (write_buffer_to_stream(stream, s) == -1) {
+        failed = 1;
+        saved_errno = err_no != 0 ? err_no : EIO;
+    }
+
+    mode_t output_mode;
+    if (original_exists) {
+        output_mode = original_stat.st_mode & 0777;
+    } else {
+        /*
+         * match the usual 0666 and umask permissions for a newly created
+         * file; this program is single threaded so reading umask is safe.
+         */
+        mode_t mask = umask(0);
+        umask(mask);
+        output_mode = (mode_t)(0666 & ~mask);
+    }
+
+    if (!failed && fchmod(fileno(stream), output_mode) == -1) {
+        perror("fchmod");
+        failed = 1;
+        saved_errno = err_no;
+    }
+
+    if (!failed && fflush(stream) == EOF) {
+        if (err_no == 0) {
+            err_no = EIO;
+        }
+        perror("fflush");
+        failed = 1;
+        saved_errno = err_no;
+    }
+
+    if (fclose(stream) == EOF && !failed) {
+        if (err_no == 0) {
+            err_no = EIO;
+        }
+        perror("fclose");
+        failed = 1;
+        saved_errno = err_no;
+    }
+
+    /*
+     * the key protection is the final rename() below. until that goes through, the original path
+     * still names the original file.
+     */
+    if (!failed && rename(temp_path, s->filename) == -1) {
+        perror("rename");
+        failed = 1;
+        saved_errno = err_no;
+    }
+
+    if (failed) {
+        unlink(temp_path);
+        free(temp_path);
+        err_no = saved_errno;
+        return -1;
+    }
+
+    free(temp_path);
     return 0;
 }
 
