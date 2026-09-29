@@ -31,7 +31,7 @@ the message disappears after about two seconds or on the next keypress.
 
 ## Installation
 
-Configure and build the editor, then install `gg` in `~/.local/bin`:
+From the project directory, run these commands (requires CMake 3.20 or newer):
 
 ```sh
 cmake --preset release
@@ -39,9 +39,19 @@ cmake --build --preset release
 cmake --install build/release --prefix "$HOME/.local"
 ```
 
-If `~/.local/bin` is not in your `PATH`, add it to run `gg` by name. Change
-the `--prefix` path to install somewhere else. To use a different directory
-name under that prefix, configure with `-DCMAKE_INSTALL_BINDIR=your-bin-dir`.
+The first command prepares the build, the second compiles `gg`, and the third
+copies it to `~/.local/bin/gg`. This installs only for your user account; no
+`sudo` is needed. To start the editor, run `~/.local/bin/gg`. If you want to
+run it by typing only `gg`, add `~/.local/bin` to your shell's `PATH`.
+
+To clean the release build (the equivalent of `make clean`), run:
+
+```sh
+cmake --build --preset clean
+```
+
+This removes the compiled build files but leaves the installed
+`~/.local/bin/gg` in place.
 
 ## Building and testing
 
@@ -68,8 +78,7 @@ The executables are `build/release/gg` and `build/debug/gg`. To check formatting
 without changing files, run `cmake --build --preset format-check`. To format
 the C sources and headers, run `cmake --build --preset format`. These two
 presets require `clang-format`; normal builds and tests do not. The GitHub
-workflow runs the same read-only formatting check. Run `cmake --build --preset
-clean` to remove compiled artifacts from the release build directory.
+workflow runs the same read-only formatting check.
 
 The presets are shortcuts for configuring, building, and testing in `build/`;
 they do not change the editor's minimum CMake requirement of 3.16. With CMake
