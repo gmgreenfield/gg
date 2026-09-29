@@ -7,9 +7,9 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 
-add_executable(gg editor.c)
+add_executable(gg src/editor.c)
 
-add_executable(editor_tests tests.c)
+add_executable(editor_tests tests/test_main.c)
 
 enable_testing()
 add_test(NAME editor_tests COMMAND editor_tests)

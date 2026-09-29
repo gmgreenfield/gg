@@ -1,6 +1,5 @@
 /gg
 /gg-debug
-/tests
 /build/
 cmake-build-*/
 .idea/

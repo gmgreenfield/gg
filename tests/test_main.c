@@ -12,7 +12,7 @@ int test_save_rename(const char *old_path, const char *new_path);
 #define fwrite test_save_fwrite
 #define rename test_save_rename
 #define main editor_program_main
-#include "editor.c"
+#include "../src/editor.c"
 #undef main
 #undef rename
 #undef fwrite

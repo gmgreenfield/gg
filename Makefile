@@ -7,28 +7,31 @@ CLANG_FORMAT := clang-format
 PREFIX ?= $(HOME)/.local
 BINDIR ?= $(PREFIX)/bin
 
-gg: editor.c
-	${CC} ${CFLAGS} editor.c -o gg
+gg: src/editor.c
+	${CC} ${CFLAGS} src/editor.c -o gg
 
 .PHONY: debug clean format format-check test install
-debug: editor.c
-	${CC} ${DEBUG_CFLAGS} editor.c -o gg-debug
+debug: src/editor.c
+	${CC} ${DEBUG_CFLAGS} src/editor.c -o gg-debug
 
 clean:
-	rm -f gg gg-debug tests
+	rm -f gg gg-debug build/editor_tests
 
 format:
-	${CLANG_FORMAT} -i editor.c tests.c
+	${CLANG_FORMAT} -i src/editor.c tests/test_main.c
 
 format-check:
-	${CLANG_FORMAT} --dry-run --Werror editor.c tests.c
+	${CLANG_FORMAT} --dry-run --Werror src/editor.c tests/test_main.c
 
-test: tests
-	./tests
+test: build/editor_tests
+	./build/editor_tests
 
 install: gg
 	install -d "$(DESTDIR)$(BINDIR)"
 	install -m 755 gg "$(DESTDIR)$(BINDIR)/gg"
 
-tests: tests.c editor.c
-	${CC} ${CFLAGS} tests.c -o tests
+build:
+	mkdir -p build
+
+build/editor_tests: tests/test_main.c src/editor.c | build
+	${CC} ${CFLAGS} tests/test_main.c -o build/editor_tests
