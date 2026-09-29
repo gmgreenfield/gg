@@ -107,6 +107,8 @@ without changing files, run `cmake --build --preset format-check`. To format
 the C sources and headers, run `cmake --build --preset format`. These two
 presets require `clang-format`; normal builds and tests do not. The GitHub
 workflow runs the same read-only formatting check.
+Another GitHub Actions workflow builds and runs the tests in Debug and Release
+configurations on both Linux and macOS.
 
 The presets are shortcuts for configuring, building, and testing in `build/`;
 they do not change the editor's minimum CMake requirement of 3.16. With CMake
