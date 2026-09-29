@@ -18,5 +18,8 @@ jobs:
       - name: Install clang-format
         run: sudo apt-get update && sudo apt-get install --yes clang-format
 
+      - name: Configure CMake
+        run: cmake -S . -B build/format
+
       - name: Check formatting
-        run: make format-check
+        run: cmake --build build/format --target format-check
