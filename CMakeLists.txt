@@ -13,6 +13,30 @@ target_include_directories(editor_core PUBLIC src)
 add_executable(gg src/main.c src/file_io.c src/terminal.c)
 target_link_libraries(gg PRIVATE editor_core)
 
+include(GNUInstallDirs)
+install(TARGETS gg RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
+find_program(CLANG_FORMAT_EXECUTABLE NAMES clang-format)
+if(CLANG_FORMAT_EXECUTABLE)
+    file(GLOB FORMAT_FILES CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.h"
+    )
+
+    add_custom_target(format
+        COMMAND "${CLANG_FORMAT_EXECUTABLE}" -i ${FORMAT_FILES}
+        VERBATIM
+    )
+    add_custom_target(format-check
+        COMMAND "${CLANG_FORMAT_EXECUTABLE}" --dry-run --Werror ${FORMAT_FILES}
+        VERBATIM
+    )
+else()
+    message(STATUS "clang-format not found; format targets are unavailable")
+endif()
+
 include(CTest)
 if(BUILD_TESTING)
     # Compile the same file-I/O source with fault injection only for the tests.
