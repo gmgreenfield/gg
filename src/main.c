@@ -10,8 +10,14 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 enum { SAVE_NOTICE_TICKS = 20 };
+
+static int is_edit_key(int key) {
+    return key == '\r' || key == '\n' || key == 127 || key == CTRL_KEY('h') ||
+           key == CTRL_KEY('s') || (key >= 32 && key <= 126);
+}
 
 int main(int argc, char **argv) {
     editor_state p = {0};
@@ -21,14 +27,16 @@ int main(int argc, char **argv) {
     int exit_status = EXIT_SUCCESS;
     int notice_ticks = 0;
 
-    if (argc > 2) {
-        fprintf(stderr, "usage: %s [filename]\n", argv[0]);
+    if (argc == 3 && strcmp(argv[1], "-R") == 0) {
+        p.read_only = 1;
+        p.filename = argv[2];
+    } else if (argc == 2 && strcmp(argv[1], "-R") != 0) {
+        p.filename = argv[1];
+    } else if (argc != 1) {
+        fprintf(stderr, "usage: %s [filename]\n       %s -R filename\n", argv[0], argv[0]);
         exit_status = EXIT_FAILURE;
         goto cleanup;
     }
-
-    if (argc == 2)
-        p.filename = argv[1];
 
     if (load_file(&p) == -1) {
         exit_status = EXIT_FAILURE;
@@ -137,6 +145,12 @@ int main(int argc, char **argv) {
                     continue;
                 }
             }
+        }
+
+        if (p.read_only && is_edit_key(key)) {
+            p.status_message = "Read-only: editing and saving are disabled.";
+            notice_ticks = SAVE_NOTICE_TICKS;
+            continue;
         }
 
         switch (key) {

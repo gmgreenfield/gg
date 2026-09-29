@@ -190,6 +190,10 @@ int append_row(editor_state *state, const char *chars, size_t length) {
 }
 
 int insert_char(editor_state *s, int key) {
+    if (s->read_only) {
+        return -1;
+    }
+
     if (s->cursor_y < 0 || (size_t)s->cursor_y >= s->file_row_count) {
         return -1;
     }
@@ -221,6 +225,10 @@ int insert_char(editor_state *s, int key) {
 }
 
 int delete_char(editor_state *s) {
+    if (s->read_only) {
+        return -1;
+    }
+
     if (s->cursor_y < 0 || (size_t)s->cursor_y >= s->file_row_count) {
         return -1;
     }
@@ -282,6 +290,10 @@ int delete_char(editor_state *s) {
 }
 
 int insert_newline(editor_state *s) {
+    if (s->read_only) {
+        return -1;
+    }
+
     if (s->cursor_y < 0 || (size_t)s->cursor_y >= s->file_row_count) {
         return -1;
     }

@@ -109,6 +109,49 @@ static void test_unnamed_save_is_not_reported_as_success(void) {
     free_rows(&state);
 }
 
+static void test_read_only_missing_file_is_an_error(void) {
+    char directory[] = "/tmp/gg-read-only-test-XXXXXX";
+    char *created = mkdtemp(directory);
+    check(created != NULL, "create read-only test directory");
+    if (created == NULL) {
+        return;
+    }
+
+    char path[sizeof(directory) + sizeof("/missing")];
+    snprintf(path, sizeof(path), "%s/missing", directory);
+    editor_state state = {.filename = path, .read_only = 1};
+
+    errno = 0;
+    check(load_file(&state) == -1 && errno == ENOENT,
+          "read-only mode refuses to open a nonexistent file");
+    check(state.file_row_count == 0, "missing read-only file leaves no buffer rows");
+
+    free_rows(&state);
+    check(rmdir(directory) == 0, "remove read-only test directory");
+}
+
+static void test_read_only_buffer_cannot_save(void) {
+    char path[] = "/tmp/gg-read-only-save-XXXXXX";
+    int fd = mkstemp(path);
+    check(fd != -1, "create read-only save fixture");
+    if (fd == -1) {
+        return;
+    }
+    check(close(fd) == 0, "close read-only save fixture");
+
+    editor_state state = {.filename = path, .read_only = 1};
+    check(append_row(&state, "unchanged", 9) == 0, "prepare read-only save buffer");
+    errno = 0;
+    check(save_file(&state) == -1 && errno == EROFS, "read-only buffer refuses to save");
+
+    struct stat file_info;
+    check(stat(path, &file_info) == 0 && file_info.st_size == 0,
+          "failed read-only save leaves the file untouched");
+
+    free_rows(&state);
+    check(unlink(path) == 0, "remove read-only save fixture");
+}
+
 static void test_failed_save_preserves_original(void) {
     char path[] = "/tmp/gg-save-failure-XXXXXX";
     int fd = mkstemp(path);
@@ -286,6 +329,8 @@ cleanup:
 void test_file_io(void) {
     test_load_save();
     test_unnamed_save_is_not_reported_as_success();
+    test_read_only_missing_file_is_an_error();
+    test_read_only_buffer_cannot_save();
     test_failed_save_preserves_original();
     test_save_fault(SAVE_FAULT_WRITE);
     test_save_fault(SAVE_FAULT_RENAME);

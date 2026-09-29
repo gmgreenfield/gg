@@ -16,7 +16,8 @@ enum test_scenario {
     NAMED_SAVE_THEN_EDIT,
     UNNAMED_SAVE_SUCCESS,
     UNNAMED_SAVE_CANCEL,
-    UNNAMED_SAVE_FAILURE
+    UNNAMED_SAVE_FAILURE,
+    READ_ONLY
 };
 
 static enum test_scenario scenario;
@@ -38,6 +39,11 @@ static int saw_prompt_while_unnamed;
 static int saw_unnamed_save_target;
 static int saw_unnamed_clean_after_save;
 static int saw_unnamed_after_failed_save;
+static int searches;
+static int saw_read_only_mode;
+static int saw_read_only_notice;
+static int saw_read_only_change;
+static int saw_read_only_navigation;
 
 static void reset_scenario(enum test_scenario next_scenario) {
     scenario = next_scenario;
@@ -59,9 +65,22 @@ static void reset_scenario(enum test_scenario next_scenario) {
     saw_unnamed_save_target = 0;
     saw_unnamed_clean_after_save = 0;
     saw_unnamed_after_failed_save = 0;
+    searches = 0;
+    saw_read_only_mode = 0;
+    saw_read_only_notice = 0;
+    saw_read_only_change = 0;
+    saw_read_only_navigation = 0;
 }
 
-int load_file(editor_state *s) { return append_row(s, "original", 8); }
+int load_file(editor_state *s) {
+    if (append_row(s, "original", 8) == -1) {
+        return -1;
+    }
+    if (scenario == READ_ONLY) {
+        return append_row(s, "second", 6);
+    }
+    return 0;
+}
 
 int save_file(const editor_state *s) {
     saves++;
@@ -93,6 +112,17 @@ int get_window_size(int *rows, int *cols) {
 
 void refresh_screen(const editor_state *s) {
     if (s->file_row_count == 0) {
+        return;
+    }
+
+    if (scenario == READ_ONLY) {
+        saw_read_only_mode |= s->read_only;
+        saw_read_only_notice |=
+            s->status_message != NULL && strstr(s->status_message, "Read-only") != NULL;
+        saw_read_only_change |= s->dirty || s->file_row_count != 2 ||
+                                strcmp(s->file_rows[0].chars, "original") != 0 ||
+                                strcmp(s->file_rows[1].chars, "second") != 0;
+        saw_read_only_navigation |= s->cursor_y == 1;
         return;
     }
 
@@ -142,6 +172,8 @@ int read_key(void) {
                                                CTRL_KEY('q')};
     static const int unnamed_success_keys[] = {'x', CTRL_KEY('s'), CTRL_KEY('q')};
     static const int unnamed_failure_keys[] = {'x', CTRL_KEY('s'), CTRL_KEY('q'), CTRL_KEY('q')};
+    static const int read_only_keys[] = {'x',           '\n',       127,           CTRL_KEY('h'),
+                                         CTRL_KEY('s'), ARROW_DOWN, CTRL_KEY('f'), CTRL_KEY('q')};
     const int *keys = failure_keys;
     size_t key_count = sizeof(failure_keys) / sizeof(failure_keys[0]);
     if (scenario == NAMED_SAVE_RETRY) {
@@ -156,6 +188,9 @@ int read_key(void) {
     } else if (scenario == UNNAMED_SAVE_CANCEL || scenario == UNNAMED_SAVE_FAILURE) {
         keys = unnamed_failure_keys;
         key_count = sizeof(unnamed_failure_keys) / sizeof(unnamed_failure_keys[0]);
+    } else if (scenario == READ_ONLY) {
+        keys = read_only_keys;
+        key_count = sizeof(read_only_keys) / sizeof(read_only_keys[0]);
     }
     if ((size_t)reads >= key_count) {
         return -1;
@@ -176,6 +211,7 @@ int read_key_with_timeout(void) {
 
 int search_prompt(editor_state *s) {
     (void)s;
+    searches++;
     return 0;
 }
 
@@ -199,6 +235,8 @@ int save_as_prompt(editor_state *s, char **filename_out) {
 int main(void) {
     char *named_argv[] = {"gg", "document", NULL};
     char *unnamed_argv[] = {"gg", NULL};
+    char *read_only_argv[] = {"gg", "-R", "document", NULL};
+    char *missing_read_only_filename_argv[] = {"gg", "-R", NULL};
 
     reset_scenario(NAMED_SAVE_FAILURE);
     int result = editor_program_main(2, named_argv);
@@ -258,6 +296,21 @@ int main(void) {
     check(saw_unnamed_after_failed_save && saw_unsaved_quit_prompt,
           "failed Save As keeps the unnamed buffer dirty");
     check(result == EXIT_SUCCESS, "confirmed quit works after failed Save As");
+
+    reset_scenario(READ_ONLY);
+    result = editor_program_main(3, read_only_argv);
+    check(result == EXIT_SUCCESS && reads == 8, "read-only mode accepts -R and exits normally");
+    check(saw_read_only_mode, "read-only flag is available to the display");
+    check(saw_read_only_notice, "blocked edits display a read-only message");
+    check(!saw_read_only_change, "typing, Enter, Backspace, and Ctrl-H cannot edit");
+    check(saves == 0 && prompts == 0, "Ctrl-S cannot save in read-only mode");
+    check(saw_read_only_navigation && searches == 1,
+          "navigation and search remain available in read-only mode");
+    check(!saw_unsaved_quit_prompt, "read-only mode quits without an unsaved warning");
+
+    reset_scenario(READ_ONLY);
+    result = editor_program_main(2, missing_read_only_filename_argv);
+    check(result == EXIT_FAILURE && reads == 0, "-R requires a filename");
 
     if (test_failure_count() != 0) {
         fprintf(stderr, "%d main-loop test(s) failed\n", test_failure_count());

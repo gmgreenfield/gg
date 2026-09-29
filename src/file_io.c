@@ -25,7 +25,7 @@ int load_file(editor_state *s) {
 
     stream = fopen(s->filename, "r");
     if (stream == NULL) {
-        if (errno == ENOENT) {
+        if (errno == ENOENT && !s->read_only) {
             return 0;
         } else {
             perror(s->filename);
@@ -185,6 +185,11 @@ int save_file(const editor_state *s) {
 
     if (s->filename == NULL) {
         errno = EINVAL;
+        return -1;
+    }
+
+    if (s->read_only) {
+        errno = EROFS;
         return -1;
     }
 

@@ -67,7 +67,8 @@ static void draw_status_bar(const editor_state *s) {
     if (s->status_message != NULL) {
         status_length = snprintf(status, sizeof(status), "%s", s->status_message);
     } else {
-        status_length = snprintf(status, sizeof(status), "%s | %zu lines | %d:%d",
+        status_length = snprintf(status, sizeof(status), "%s%s | %zu lines | %d:%d",
+                                 s->read_only ? "[read-only] " : "",
                                  s->filename != NULL ? s->filename : "[No Name]", s->file_row_count,
                                  s->cursor_y + 1, s->cursor_x + 1);
     }
