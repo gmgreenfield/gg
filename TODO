@@ -1,0 +1,34 @@
+1. Add undo and redo so accidental edits can be reversed and later features
+   such as replace and cut/paste are recoverable. Start with one edit per undo
+   step; redo reapplies an undone edit, and a new edit clears redo history.
+   Grouping consecutive typing into one undo step can come later.
+
+2. Add replacement to the existing search. Use its literal, case-sensitive
+   matching: prompt for search and replacement text, then offer to replace
+   or skip each match. Reject an empty search, but allow an empty replacement to
+   delete a match. Make each replacement undoable and refuse changes in -R mode.
+   Replace-all, regular expressions, and case-insensitive matching can wait.
+
+3. Add selection and cut, copy, and paste.
+
+4. Handle UTF-8 text and tabs correctly, including cursor and screen columns.
+   gg currently treats a byte offset as a screen column. That works for ASCII,
+   but a UTF-8 character can use multiple bytes while occupying one or two
+   terminal columns, and a tab uses one byte while spanning several columns.
+   Track the mapping between file byte positions and displayed columns so
+   drawing, cursor movement, and horizontal scrolling stay aligned; never
+   place the cursor in the middle of a multibyte character.
+
+5. Warn before saving if the file has changed on disk since gg opened or last
+   saved it. Otherwise a save could silently overwrite another program's
+   changes. Let the user decide whether to overwrite the newer file.
+
+6. Add Vim-style parenthesis and bracket matching for (), [], and {}. Highlight
+   the delimiter at the cursor and its matching partner, and provide a command
+   to jump between them. As in Vim, if the cursor is not on a delimiter, the
+   jump should use the next one on the current line. Handle nested pairs and
+   matches across lines; follow Vim's rules for strings, comments, and unmatched
+   delimiters. Use Vim's motion and matchparen documentation as the reference:
+   https://vimhelp.org/motion.txt.html and https://vimhelp.org/pi_paren.txt.html.
+   Use Ctrl-Shift-% for the jump, keeping plain % available for typing; verify
+   what macOS and Linux terminals actually send for that key combination.
