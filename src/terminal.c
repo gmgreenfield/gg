@@ -4,6 +4,7 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include "terminal.h"
+#include "safe_output.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -64,8 +65,8 @@ static void draw_rows(const editor_state *s) {
                 }
             }
 
-            for (size_t j = 0; j < length; j++) {
-                putchar(row->chars[start + j]);
+            if (length > 0) {
+                write_safe_terminal_text(stdout, row->chars + start, length);
             }
         } else {
             putchar('~');
@@ -104,7 +105,7 @@ static void draw_status_bar(const editor_state *s) {
         status_length = s->screen_cols;
     }
 
-    fwrite(status, 1, (size_t)status_length, stdout);
+    write_safe_terminal_text(stdout, status, (size_t)status_length);
 
     for (int i = status_length; i < s->screen_cols; i++) {
         putchar(' ');

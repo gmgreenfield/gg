@@ -4,6 +4,7 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include "file_io.h"
+#include "safe_output.h"
 
 #include <errno.h>
 #include <stdint.h>
@@ -30,7 +31,8 @@ int load_file(editor_state *s) {
             return 0;
         } else {
             int saved_errno = errno;
-            perror(s->filename);
+            write_safe_terminal_text(stderr, s->filename, strlen(s->filename));
+            fprintf(stderr, ": %s\n", strerror(saved_errno));
             errno = saved_errno;
             return -1;
         }
@@ -171,7 +173,10 @@ static int get_output_mode(const char *filename, mode_t *output_mode) {
     }
 
     if (errno != ENOENT) {
-        perror(filename);
+        int saved_errno = errno;
+        write_safe_terminal_text(stderr, filename, strlen(filename));
+        fprintf(stderr, ": %s\n", strerror(saved_errno));
+        errno = saved_errno;
         return -1;
     }
 
