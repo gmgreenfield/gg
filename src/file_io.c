@@ -29,7 +29,9 @@ int load_file(editor_state *s) {
         if (errno == ENOENT && !s->read_only) {
             return 0;
         } else {
+            int saved_errno = errno;
             perror(s->filename);
+            errno = saved_errno;
             return -1;
         }
     }
