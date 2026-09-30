@@ -59,60 +59,59 @@ and check that both lines appear with the same read-only behavior.
 
 ## Installation
 
-From the project directory, run these commands (requires CMake 3.20 or newer):
+From the project directory, run (requires `make` and CMake 3.20 or newer):
 
 ```sh
-cmake --preset release
-cmake --build --preset release
-cmake --install build/release --prefix "$HOME/.local"
+make install
 ```
 
-The first command prepares the build, the second compiles `gg`, and the third
-copies it to `~/.local/bin/gg`. This installs only for your user account; no
-`sudo` is needed. To start the editor, run `~/.local/bin/gg`. If you want to
-run it by typing only `gg`, add `~/.local/bin` to your shell's `PATH`.
+This builds `gg` with CMake and copies it to `~/.local/bin/gg`. It installs only
+for your user account; no `sudo` is needed. To start the editor, run
+`~/.local/bin/gg`. If you want to run it by typing only `gg`, add `~/.local/bin`
+to your shell's `PATH`. To use another destination, run
+`make install INSTALL_PREFIX=/your/prefix` (the executable goes in its `bin`
+directory).
 
-To clean the release build (the equivalent of `make clean`), run:
+To clean compiled files without removing the installed executable, run:
 
 ```sh
-cmake --build --preset clean
+make clean
 ```
-
-This removes the compiled build files but leaves the installed
-`~/.local/bin/gg` in place.
 
 ## Building and testing
 
-Build and run both test executables with the project presets (CMake 3.20 or newer):
+The root Makefile provides short commands for the CMake presets. To build and
+test the Release configuration, run:
 
 ```sh
-cmake --preset release
-cmake --build --preset release
-ctest --preset release
+make
+make test
 ```
 
 The file-I/O tests deliberately print errors such as "No space left on device"
-while checking failed saves. A successful CTest run reports that both tests passed.
+while checking failed saves.
 
 For a build with debugging symbols, use a separate build directory:
 
 ```sh
-cmake --preset debug
-cmake --build --preset debug
-ctest --preset debug
+make debug
+make test-debug
 ```
 
-The executables are `build/release/gg` and `build/debug/gg`. To check formatting
-without changing files, run `cmake --build --preset format-check`. To format
-the C sources and headers, run `cmake --build --preset format`. These two
-presets require `clang-format`; normal builds and tests do not. The GitHub
-workflow runs the same read-only formatting check.
+The executables are `build/release/gg` and `build/debug/gg`. Use `make clean`
+or `make clean-debug` to clean the respective build. To check formatting without
+changing files, run `make format-check`; to format the C sources and headers,
+run `make format`. These two commands require `clang-format`; normal builds and
+tests do not. Run `make help` for the full command list. The GitHub workflow
+runs the same read-only formatting check.
 Another GitHub Actions workflow builds and runs the tests in Debug and Release
 configurations on both Linux and macOS.
 
-The presets are shortcuts for configuring, building, and testing in `build/`;
-they do not change the editor's minimum CMake requirement of 3.16. With CMake
-3.16–3.19, use the equivalent commands without presets, for example:
+The Makefile delegates to CMake; it does not define a separate build. You can
+still call `cmake --preset release`, `cmake --build --preset release`, and
+`ctest --preset release` directly. The presets require CMake 3.20 or newer, but
+the project itself supports CMake 3.16. With CMake 3.16–3.19, use commands
+without presets, for example:
 
 ```sh
 cmake -S . -B build/release -DCMAKE_BUILD_TYPE=Release
