@@ -69,4 +69,13 @@ if(BUILD_TESTING)
     )
     target_link_libraries(main_loop_tests PRIVATE editor_core)
     add_test(NAME main_loop_tests COMMAND main_loop_tests)
+
+    add_executable(terminal_tests
+        tests/test_terminal.c
+        tests/test_helpers.c
+        src/terminal.c
+        src/file_io.c
+    )
+    target_link_libraries(terminal_tests PRIVATE editor_core)
+    add_test(NAME terminal_tests COMMAND terminal_tests)
 endif()
