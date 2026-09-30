@@ -171,7 +171,9 @@ static void test_read_only_stdin_load(void) {
         if (dup2(pipe_fds[0], STDIN_FILENO) == -1) {
             _exit(2);
         }
-        close(pipe_fds[0]);
+        if (pipe_fds[0] != STDIN_FILENO) {
+            close(pipe_fds[0]);
+        }
         clearerr(stdin);
         editor_state state = {.filename = "-", .read_only = 1};
         int loaded = load_file(&state) == 0 && state.file_row_count == 2 &&
