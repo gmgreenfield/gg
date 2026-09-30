@@ -8,7 +8,7 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 
-add_library(editor_core STATIC src/editor.c)
+add_library(editor_core STATIC src/editor.c src/safe_output.c)
 target_include_directories(editor_core PUBLIC src)
 
 add_executable(gg src/main.c src/file_io.c src/terminal.c)
